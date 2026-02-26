@@ -18,7 +18,7 @@ A full-stack hardware and software solution to replace static OEM rear reflector
 ## 📂 Repository Structure
 - `/Firmware`: Arduino source code (.ino)
 - `/Hardware`: KiCad project files & PCB Schematics
-- `/Mechanical`: STL/STEP files for 3D printing
+- `/Mechanical`: .3mf files for printing. **DO NOT CHANGE FILAMENT / SPEED ON LENS OTHERWISE IT WILL NOT COME OUT PROPERLY**
 - `/Media`: High-res project photography
 
 ## ⚖️ License
