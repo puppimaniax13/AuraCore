@@ -1,2 +1,28 @@
-# VB-Series-Subaru-WRX-Dynamic-Lighting-Platform
-Developed a high-fidelity LED lighting solution for the VB Subaru WRX, featuring a modular PCB design capable of being adapted across various automotive reflector housings. This project bridges the gap between static OEM safety equipment and intelligent, reactive lighting by combining custom PCB fabrication, 3D-modeled enclosures, and C++ firmware.
+# 2022+ Subaru WRX Dynamic LED Reflector Platform
+
+![Project Header](path/to/your/photo.jpg)
+
+A full-stack hardware and software solution to replace static OEM rear reflectors with addressable, reactive LED modules. This project features a modular PCB designed for the VB chassis but adaptable to any 12V automotive lighting application.
+
+## 🚀 Technical Overview
+- **Mechanical:** Custom 3D-printed housings (Fusion 360) designed for OEM fitment.
+- **Electrical:** Dual-layer custom PCB (KiCad) with 12V->5V buck regulation and signal filtering.
+- **Software:** C++ Firmware (Arduino) utilizing **FastLED** for sequential animations and interrupt-driven brake logic.
+
+## 🛠️ Hardware Stack
+- **MCU:** [Your Microcontroller Name]
+- **LEDs:** WS2812B Addressable Strips
+- **Design Tools:** KiCad 7.0, Autodesk Fusion 360, Adobe Lightroom (Documentation)
+
+## 📂 Repository Structure
+- `/Firmware`: Arduino source code (.ino)
+- `/Hardware`: KiCad project files & PCB Schematics
+- `/Mechanical`: STL/STEP files for 3D printing
+- `/Media`: High-res project photography
+
+## ⚖️ License
+Code/Firmware: This project is licensed under the **GNU GPLv3**. You are free to use and modify it, but any derivative works must also be open-sourced under the same license.
+
+Hardware & Design (PCB/3D Models): Licensed under CC BY-NC-SA 4.0. Personal use is encouraged; commercial use or resale of these designs is strictly prohibited without prior authorization.
+
+*Commercial use or resale of these designs is strictly prohibited.*
