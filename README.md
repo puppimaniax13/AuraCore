@@ -1,4 +1,4 @@
-# 2022+ Subaru WRX Dynamic LED Reflector Platform
+# AuraCore
 
 ![Project Header](placeholder.jpg)
 
@@ -18,7 +18,6 @@ A full-stack hardware and software solution to replace static OEM rear reflector
 ## 📂 Repository Structure
 - `/Firmware`: Arduino source code (.ino)
 - `/Hardware`: KiCad project files & PCB Schematics
-- `/Mechanical`: .3mf files for printing
 - `/Media`: High-res project photography
 
 ## 🖨️ 3D Printing
