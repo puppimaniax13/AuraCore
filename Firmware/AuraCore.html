@@ -2,7 +2,7 @@
 <html>
 <head>
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Aura Core v1.4 - Desktop Preview</title>
+    <title>Aura Core v1.5 - Desktop Preview</title>
     <style>
         :root {
             --accent: #007aff;
@@ -52,7 +52,7 @@
         .drop-content { display: none; padding-top: 10px; }
         .debug-text { display: none; font-family: monospace; font-size: 0.65rem; color: #0f0; text-align: left; background: #000; padding: 12px; border-radius: 10px; border: 1px solid #0f0; margin-top: 15px; }
         
-        label { font-size: 0.65rem; color: #888; text-transform: uppercase; font-weight: bold; display: block; margin-bottom: 5px; }
+        label { font-size: 0.65rem; color: #888; text-transform: uppercase; font-weight: bold; display: block; margin-bottom: 5px; text-align: left;}
         .val-label { color: var(--accent); float: right; }
         .rbow-st { padding: 15px; background: var(--rbow); border-radius: 10px; margin-top: 10px; font-size: 0.75rem; font-weight: bold; color: white; text-shadow: 1px 1px 2px #000; }
     </style>
@@ -61,11 +61,22 @@
 
     <div class="container">
         <h1 onclick="dCheck()">AURA CORE</h1>
-        <div class="sub">Universal Logic Controller</div>
+        <div class="sub">Universal Logic Controller v1.5</div>
 
         <div class="card">
-            <label>Brightness <span id="bPct" class="val-label">78%</span></label>
+            <label>Master Brightness <span id="bPct" class="val-label">78%</span></label>
             <input type="range" min="0" max="255" value="200" oninput="uB(this.value)">
+        </div>
+
+        <div class="card">
+            <label>Brake Light Style</label>
+            <div class="tabs">
+                <div onclick="sB(0)" id="b0" class="tab active-tab">SOLID</div>
+                <div onclick="sB(1)" id="b1" class="tab">F1 STROBE</div>
+                <div onclick="sB(2)" id="b2" class="tab">2-TAP</div>
+            </div>
+            <label>Brake Color</label>
+            <input type="color" id="brakeCol" value="#FF0000" onchange="console.log('Brake Color: ' + this.value)">
         </div>
 
         <div class="card">
@@ -96,10 +107,9 @@
             </div>
             
             <div id="tunerContent" class="drop-content">
-                
                 <div style="margin-top:20px;">
                     <label>LED Count (Per Side)</label>
-                    <input type="number" value="20" min="1" max="150">
+                    <input type="number" value="20" min="1" max="150" onchange="console.log('LED Count: ' + this.value)">
                 </div>
 
                 <div class="toggle-box" style="margin-top:20px;">
@@ -125,25 +135,29 @@
     </div>
 
     <script>
-        // Live Brightness Display
+        // Brake Style Selector
+        function sB(mode) {
+            document.getElementById('b0').className = (mode === 0) ? 'tab active-tab' : 'tab';
+            document.getElementById('b1').className = (mode === 1) ? 'tab active-tab' : 'tab';
+            document.getElementById('b2').className = (mode === 2) ? 'tab active-tab' : 'tab';
+            console.log("Brake Mode Set: " + mode);
+        }
+
         function uB(v) {
             let pct = Math.round((v / 255) * 100);
             document.getElementById('bPct').innerText = pct + '%';
         }
 
-        // Live Timing Display
         function uF(v) {
             document.getElementById('fineVal').innerText = v + 'ms';
             document.getElementById('dbOffset').innerText = v + 'ms';
         }
 
-        // Dropdown Toggle
         function toggleTuner() {
             const content = document.getElementById('tunerContent');
             content.style.display = (content.style.display === 'block') ? 'none' : 'block';
         }
 
-        // Secret Debug Check
         let tC = 0;
         function dCheck() {
             tC++;
@@ -151,7 +165,6 @@
             setTimeout(() => tC = 0, 1000);
         }
 
-        // UI View Switchers
         function sM(type, mode) {
             const isR = (mode === 'r');
             if(type === 'd') {
@@ -167,7 +180,6 @@
             }
         }
 
-        // Toggle Invert Visuals
         let inv = false;
         function toggleInvert() {
             inv = !inv;
@@ -176,7 +188,6 @@
             btn.style.background = inv ? "#ff0055" : "#333";
         }
 
-        // Showroom Button Toggle
         function tS(btn) {
             if(btn.innerText.includes('ACTIVATE')) {
                 btn.innerText = 'DEACTIVATE SHOWROOM';
