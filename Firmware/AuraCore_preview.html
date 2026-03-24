@@ -1,0 +1,914 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>AuraCore v2.0</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;600;700&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg:       #080a0c;
+      --surface:  #0f1215;
+      --card:     #13171c;
+      --border:   #1e252e;
+      --border2:  #2a3340;
+      --accent:   #ff6a00;
+      --accent2:  #ffaa44;
+      --blue:     #3a8fff;
+      --green:    #2dff8e;
+      --red:      #ff3a3a;
+      --amber:    #ffbf00;
+      --text:     #cdd6e0;
+      --muted:    #4a5a6a;
+      --dim:      #232d38;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Rajdhani', sans-serif;
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      padding: 0 0 40px 0;
+    }
+
+    .app { width: 100%; max-width: 420px; padding: 0 14px; }
+
+    /* ─── HEADER ─── */
+    .header {
+      padding: 28px 0 18px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .logo { display: flex; flex-direction: column; }
+    .logo-name {
+      font-family: 'Rajdhani', sans-serif;
+      font-weight: 700;
+      font-size: 1.6rem;
+      letter-spacing: 5px;
+      color: #fff;
+      line-height: 1;
+    }
+    .logo-name span { color: var(--accent); }
+    .logo-sub {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.55rem;
+      color: var(--muted);
+      letter-spacing: 3px;
+      margin-top: 3px;
+    }
+    .conn-badge {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 6px 12px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.6rem;
+      color: var(--green);
+      cursor: pointer;
+    }
+    .conn-dot {
+      width: 7px; height: 7px;
+      border-radius: 50%;
+      background: var(--green);
+      box-shadow: 0 0 8px var(--green);
+      animation: pulse-dot 2s infinite;
+    }
+    @keyframes pulse-dot {
+      0%,100% { opacity: 1; } 50% { opacity: 0.4; }
+    }
+
+    /* ─── DIVIDER ─── */
+    .divider {
+      height: 1px;
+      background: linear-gradient(90deg, transparent, var(--border2), transparent);
+      margin: 4px 0 18px;
+    }
+
+    /* ─── STATUS BAR ─── */
+    .status-bar {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr 1fr;
+      gap: 8px;
+      margin-bottom: 18px;
+    }
+    .sig {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 10px 6px;
+      text-align: center;
+      transition: all 0.2s;
+      position: relative;
+      overflow: hidden;
+    }
+    .sig::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      opacity: 0;
+      transition: opacity 0.2s;
+    }
+    .sig.active-sig { border-color: currentColor; }
+    .sig.active-sig::before { opacity: 0.07; background: currentColor; }
+    .sig-icon { font-size: 1.1rem; line-height: 1; margin-bottom: 4px; }
+    .sig-label {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.48rem;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+    .sig-state {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.55rem;
+      font-weight: 700;
+      margin-top: 2px;
+    }
+    .sig.drl  { color: var(--blue);  }
+    .sig.brk  { color: var(--red);   }
+    .sig.tl   { color: var(--amber); }
+    .sig.tr   { color: var(--amber); }
+
+    /* ─── CAR DIAGRAM ─── */
+    .car-section {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      padding: 18px 14px 14px;
+      margin-bottom: 18px;
+    }
+    .section-label {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.55rem;
+      color: var(--muted);
+      letter-spacing: 3px;
+      text-transform: uppercase;
+      margin-bottom: 14px;
+    }
+    .car-diagram {
+      width: 100%;
+      max-width: 340px;
+      margin: 0 auto;
+      display: block;
+    }
+    .zone-btn {
+      position: absolute;
+      width: 36px; height: 36px;
+      border-radius: 50%;
+      border: 2px solid var(--border2);
+      background: var(--dim);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.6rem;
+      font-family: 'JetBrains Mono', monospace;
+      color: var(--muted);
+      transition: all 0.2s;
+    }
+    .zone-btn.selected {
+      border-color: var(--accent);
+      color: var(--accent);
+      background: rgba(255,106,0,0.1);
+    }
+    .diagram-wrap { position: relative; }
+
+    /* zone labels on SVG */
+    .zone-label {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 8px;
+      fill: var(--muted);
+      text-anchor: middle;
+    }
+
+    /* ─── CARD ─── */
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      padding: 18px;
+      margin-bottom: 14px;
+    }
+    .card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+    }
+    .card-title {
+      font-weight: 700;
+      font-size: 0.85rem;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+    }
+    .card-tag {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.55rem;
+      color: var(--muted);
+      background: var(--dim);
+      border-radius: 6px;
+      padding: 3px 8px;
+    }
+
+    /* ─── BRIGHTNESS ─── */
+    .bright-row {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+    .bright-val {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 1.4rem;
+      font-weight: 700;
+      color: #fff;
+      min-width: 54px;
+      text-align: right;
+    }
+    .bright-unit {
+      font-size: 0.7rem;
+      color: var(--muted);
+      font-weight: 400;
+    }
+    input[type='range'] {
+      -webkit-appearance: none;
+      appearance: none;
+      flex: 1;
+      height: 6px;
+      border-radius: 3px;
+      background: var(--dim);
+      outline: none;
+    }
+    input[type='range']::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 22px; height: 22px;
+      border-radius: 50%;
+      background: var(--accent);
+      border: 3px solid var(--bg);
+      box-shadow: 0 0 10px rgba(255,106,0,0.5);
+      cursor: pointer;
+    }
+
+    /* ─── TABS ─── */
+    .tabs {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+    .tab {
+      flex: 1;
+      min-width: 0;
+      padding: 12px 6px;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      background: var(--surface);
+      color: var(--muted);
+      font-family: 'Rajdhani', sans-serif;
+      font-weight: 700;
+      font-size: 0.72rem;
+      letter-spacing: 1px;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.15s;
+      user-select: none;
+    }
+    .tab:active { transform: scale(0.96); }
+    .tab.active-tab {
+      background: var(--dim);
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+
+    /* ─── COLOR ZONE ROW ─── */
+    .zone-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-top: 14px;
+    }
+    .zone-picker {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .zone-lbl {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.52rem;
+      color: var(--muted);
+      letter-spacing: 2px;
+      text-transform: uppercase;
+    }
+    input[type='color'] {
+      width: 100%;
+      height: 48px;
+      border: 1px solid var(--border2);
+      border-radius: 10px;
+      background: var(--surface);
+      cursor: pointer;
+      padding: 4px;
+    }
+
+    /* ─── RAINBOW BADGE ─── */
+    .rainbow-badge {
+      padding: 14px;
+      border-radius: 10px;
+      background: linear-gradient(90deg,#f00,#ff8000,#ff0,#0f0,#00f,#8b00ff);
+      text-align: center;
+      font-weight: 700;
+      font-size: 0.75rem;
+      letter-spacing: 2px;
+      color: #fff;
+      text-shadow: 1px 1px 4px #000;
+      margin-top: 14px;
+    }
+
+    /* ─── SPEED SLIDER ─── */
+    .speed-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-top: 14px;
+    }
+    .speed-icon { font-size: 1rem; }
+    .speed-val {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.85rem;
+      color: var(--accent);
+      min-width: 42px;
+      text-align: right;
+    }
+
+    /* ─── SHOWROOM BTN ─── */
+    .btn-showroom {
+      width: 100%;
+      padding: 18px;
+      border-radius: 14px;
+      border: none;
+      background: var(--accent);
+      color: #fff;
+      font-family: 'Rajdhani', sans-serif;
+      font-weight: 700;
+      font-size: 1rem;
+      letter-spacing: 3px;
+      cursor: pointer;
+      transition: all 0.2s;
+      margin-bottom: 14px;
+      position: relative;
+      overflow: hidden;
+    }
+    .btn-showroom:active { transform: scale(0.98); }
+    .btn-showroom.active {
+      background: var(--red);
+      box-shadow: 0 0 20px rgba(255,58,58,0.35);
+    }
+    .btn-showroom::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(180deg, rgba(255,255,255,0.07) 0%, transparent 60%);
+    }
+
+    /* ─── TUNER ─── */
+    .tuner-toggle {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      cursor: pointer;
+      user-select: none;
+      padding: 2px 0;
+    }
+    .tuner-title {
+      font-weight: 700;
+      font-size: 0.85rem;
+      letter-spacing: 2px;
+      color: var(--accent2);
+    }
+    .tuner-arrow {
+      font-size: 0.8rem;
+      color: var(--muted);
+      transition: transform 0.25s;
+    }
+    .tuner-arrow.open { transform: rotate(180deg); }
+    .tuner-body {
+      display: none;
+      padding-top: 18px;
+    }
+    .tuner-body.open { display: block; }
+
+    .field-row {
+      margin-bottom: 16px;
+    }
+    .field-lbl {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.52rem;
+      color: var(--muted);
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      margin-bottom: 8px;
+      display: flex;
+      justify-content: space-between;
+    }
+    .field-lbl span { color: var(--accent); }
+
+    input[type='number'] {
+      width: 100%;
+      height: 48px;
+      border: 1px solid var(--border2);
+      border-radius: 10px;
+      background: var(--surface);
+      color: #fff;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 1rem;
+      text-align: center;
+      outline: none;
+    }
+
+    .toggle-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 14px 16px;
+      margin-bottom: 14px;
+    }
+    .toggle-lbl {
+      font-weight: 600;
+      font-size: 0.8rem;
+      letter-spacing: 1px;
+    }
+    .pill-btn {
+      padding: 8px 16px;
+      border-radius: 8px;
+      border: 1px solid var(--border2);
+      background: var(--dim);
+      color: var(--text);
+      font-family: 'Rajdhani', sans-serif;
+      font-weight: 700;
+      font-size: 0.7rem;
+      letter-spacing: 1px;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .pill-btn.inverted {
+      background: rgba(255,58,58,0.15);
+      border-color: var(--red);
+      color: var(--red);
+    }
+
+    .btn-sync {
+      width: 100%;
+      padding: 15px;
+      border-radius: 12px;
+      border: 1px solid var(--amber);
+      background: rgba(255,191,0,0.08);
+      color: var(--amber);
+      font-family: 'Rajdhani', sans-serif;
+      font-weight: 700;
+      font-size: 0.85rem;
+      letter-spacing: 2px;
+      cursor: pointer;
+      margin-bottom: 10px;
+      transition: all 0.15s;
+    }
+    .btn-sync:active { background: rgba(255,191,0,0.15); }
+
+    .btn-reset {
+      width: 100%;
+      padding: 14px;
+      border-radius: 12px;
+      border: 1px solid #2a1515;
+      background: #0e0808;
+      color: #ff5555;
+      font-family: 'Rajdhani', sans-serif;
+      font-weight: 700;
+      font-size: 0.75rem;
+      letter-spacing: 2px;
+      cursor: pointer;
+      margin-top: 8px;
+    }
+
+    /* ─── DEBUG ─── */
+    .debug-panel {
+      display: none;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.6rem;
+      color: var(--green);
+      background: #000;
+      border: 1px solid var(--green);
+      border-radius: 10px;
+      padding: 12px;
+      margin-top: 14px;
+      line-height: 1.8;
+    }
+
+    /* ─── SCAN LINE TEXTURE ─── */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background: repeating-linear-gradient(
+        0deg,
+        transparent,
+        transparent 2px,
+        rgba(0,0,0,0.03) 2px,
+        rgba(0,0,0,0.03) 4px
+      );
+      pointer-events: none;
+      z-index: 999;
+    }
+  </style>
+</head>
+<body>
+<div class="app">
+
+  <!-- HEADER -->
+  <div class="header">
+    <div class="logo">
+      <div class="logo-name">AURA<span>CORE</span></div>
+      <div class="logo-sub">LOGIC CONTROLLER · V2.0</div>
+    </div>
+    <div class="conn-badge" onclick="dCheck()">
+      <div class="conn-dot"></div>
+      ONLINE
+    </div>
+  </div>
+
+  <div class="divider"></div>
+
+  <!-- STATUS BAR -->
+  <div class="status-bar">
+    <div class="sig drl" id="sigDRL">
+      <div class="sig-icon">💡</div>
+      <div class="sig-label">DRL</div>
+      <div class="sig-state" id="sDRL">OFF</div>
+    </div>
+    <div class="sig brk" id="sigBRK">
+      <div class="sig-icon">🔴</div>
+      <div class="sig-label">BRAKE</div>
+      <div class="sig-state" id="sBRK">OFF</div>
+    </div>
+    <div class="sig tl" id="sigTL">
+      <div class="sig-icon">◀</div>
+      <div class="sig-label">LEFT</div>
+      <div class="sig-state" id="sTL">OFF</div>
+    </div>
+    <div class="sig tr" id="sigTR">
+      <div class="sig-icon">▶</div>
+      <div class="sig-label">RIGHT</div>
+      <div class="sig-state" id="sTR">OFF</div>
+    </div>
+  </div>
+
+  <!-- CAR DIAGRAM -->
+  <div class="car-section">
+    <div class="section-label">LED ZONE MAP</div>
+    <svg class="car-diagram" viewBox="0 0 300 160" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <filter id="glow">
+          <feGaussianBlur stdDeviation="2.5" result="blur"/>
+          <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+        </filter>
+        <linearGradient id="bodyGrad" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="#1e252e"/>
+          <stop offset="100%" stop-color="#111820"/>
+        </linearGradient>
+      </defs>
+
+      <!-- Car body outline -->
+      <rect x="60" y="30" width="180" height="100" rx="16" fill="url(#bodyGrad)" stroke="#2a3340" stroke-width="1.5"/>
+      <!-- Roof -->
+      <rect x="90" y="18" width="120" height="28" rx="8" fill="#131a22" stroke="#2a3340" stroke-width="1"/>
+      <!-- Windshield -->
+      <rect x="94" y="20" width="112" height="24" rx="6" fill="#0d1520" opacity="0.8"/>
+
+      <!-- Wheels -->
+      <circle cx="100" cy="130" r="14" fill="#0a0e14" stroke="#2a3340" stroke-width="2"/>
+      <circle cx="100" cy="130" r="7" fill="#13171c" stroke="#1e252e" stroke-width="1"/>
+      <circle cx="200" cy="130" r="14" fill="#0a0e14" stroke="#2a3340" stroke-width="2"/>
+      <circle cx="200" cy="130" r="7" fill="#13171c" stroke="#1e252e" stroke-width="1"/>
+
+      <!-- REAR LIGHTS (left = driver side) -->
+      <!-- Left Rear Zone -->
+      <rect id="zRL" x="62" y="45" width="18" height="50" rx="5" fill="#1a0505" stroke="#ff3a3a" stroke-width="1.5" filter="url(#glow)" class="zone-rect" data-zone="left-rear" style="cursor:pointer;" onclick="selectZone('left-rear')"/>
+      <text x="71" y="100" class="zone-label">L</text>
+
+      <!-- Right Rear Zone -->
+      <rect id="zRR" x="220" y="45" width="18" height="50" rx="5" fill="#1a0505" stroke="#ff3a3a" stroke-width="1.5" filter="url(#glow)" class="zone-rect" data-zone="right-rear" style="cursor:pointer;" onclick="selectZone('right-rear')"/>
+      <text x="229" y="100" class="zone-label">R</text>
+
+      <!-- REAR LIGHT GLOW ACTIVE (hidden by default) -->
+      <rect id="glowRL" x="58" y="42" width="26" height="56" rx="7" fill="none" stroke="#ff3a3a" stroke-width="0" opacity="0"/>
+      <rect id="glowRR" x="216" y="42" width="26" height="56" rx="7" fill="none" stroke="#ff3a3a" stroke-width="0" opacity="0"/>
+
+      <!-- CENTER indicators -->
+      <rect x="120" y="58" width="60" height="8" rx="3" fill="#0a1018" stroke="#1e252e" stroke-width="1"/>
+      <rect x="120" y="74" width="60" height="8" rx="3" fill="#0a1018" stroke="#1e252e" stroke-width="1"/>
+      <rect x="120" y="90" width="60" height="8" rx="3" fill="#0a1018" stroke="#1e252e" stroke-width="1"/>
+
+      <!-- Zone label -->
+      <text x="150" y="150" class="zone-label" fill="#3a4a5a" font-size="7">REAR VIEW</text>
+    </svg>
+
+    <div style="display:flex; gap:10px; margin-top:12px; justify-content:center;">
+      <div style="display:flex;align-items:center;gap:5px;">
+        <div style="width:10px;height:10px;border-radius:2px;background:#ff3a3a;box-shadow:0 0 6px #ff3a3a;"></div>
+        <span style="font-family:'JetBrains Mono',monospace;font-size:0.55rem;color:var(--muted);">BRAKE / DRL</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:5px;">
+        <div style="width:10px;height:10px;border-radius:2px;background:var(--amber);box-shadow:0 0 6px var(--amber);"></div>
+        <span style="font-family:'JetBrains Mono',monospace;font-size:0.55rem;color:var(--muted);">TURN SIGNAL</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- BRIGHTNESS -->
+  <div class="card">
+    <div class="card-header">
+      <div class="card-title">BRIGHTNESS</div>
+      <div class="card-tag" id="bPct">78%</div>
+    </div>
+    <div class="bright-row">
+      <input type="range" min="0" max="255" value="200" oninput="uB(this.value)" onchange="fetch('/bright?val='+this.value)" style="flex:1;">
+      <div class="bright-val" id="bVal">200<span class="bright-unit"> / 255</span></div>
+    </div>
+  </div>
+
+  <!-- BRAKE -->
+  <div class="card">
+    <div class="card-header">
+      <div class="card-title">BRAKE LIGHT</div>
+      <div class="card-tag">REAR</div>
+    </div>
+    <div class="tabs" id="brakeTabs">
+      <div class="tab active-tab" onclick="sB(0)" id="b0">SOLID</div>
+      <div class="tab" onclick="sB(1)" id="b1">F1 STROBE</div>
+      <div class="tab" onclick="sB(2)" id="b2">2-TAP</div>
+      <div class="tab" onclick="sB(3)" id="b3">PULSE</div>
+      <div class="tab" onclick="sB(4)" id="b4">FADE-IN</div>
+    </div>
+    <div class="zone-row" style="margin-top:16px;">
+      <div class="zone-picker">
+        <div class="zone-lbl">LEFT SIDE</div>
+        <input type="color" id="bColorL" value="#FF0000" onchange="sendColor('/bcolor_l', this.value)">
+      </div>
+      <div class="zone-picker">
+        <div class="zone-lbl">RIGHT SIDE</div>
+        <input type="color" id="bColorR" value="#FF0000" onchange="sendColor('/bcolor_r', this.value)">
+      </div>
+    </div>
+    <div style="margin-top:10px; text-align:right;">
+      <span onclick="syncBrakeColors()" style="font-family:'JetBrains Mono',monospace;font-size:0.55rem;color:var(--muted);cursor:pointer;text-decoration:underline;text-underline-offset:3px;">SYNC L/R</span>
+    </div>
+  </div>
+
+  <!-- DRL -->
+  <div class="card">
+    <div class="card-header">
+      <div class="card-title">DRL</div>
+      <div class="card-tag">DAYTIME</div>
+    </div>
+    <div class="tabs">
+      <div class="tab active-tab" onclick="sM('d','solid')" id="tDS">SOLID</div>
+      <div class="tab" onclick="sM('d','rainbow')" id="tDR">RAINBOW</div>
+      <div class="tab" onclick="sM('d','breathe')" id="tDB">BREATHE</div>
+      <div class="tab" onclick="sM('d','chase')" id="tDC">CHASE</div>
+    </div>
+    <div id="dSC">
+      <div class="zone-row">
+        <div class="zone-picker">
+          <div class="zone-lbl">LEFT SIDE</div>
+          <input type="color" value="#E10000" onchange="sendColor('/drl_l', this.value)">
+        </div>
+        <div class="zone-picker">
+          <div class="zone-lbl">RIGHT SIDE</div>
+          <input type="color" value="#E10000" onchange="sendColor('/drl_r', this.value)">
+        </div>
+      </div>
+      <div style="margin-top:10px; text-align:right;">
+        <span onclick="syncDRLColors()" style="font-family:'JetBrains Mono',monospace;font-size:0.55rem;color:var(--muted);cursor:pointer;text-decoration:underline;text-underline-offset:3px;">SYNC L/R</span>
+      </div>
+    </div>
+    <div id="dRC" style="display:none;"><div class="rainbow-badge">RAINBOW ACTIVE</div></div>
+  </div>
+
+  <!-- TURN SIGNAL -->
+  <div class="card">
+    <div class="card-header">
+      <div class="card-title">TURN SIGNAL</div>
+      <div class="card-tag">SEQUENTIAL</div>
+    </div>
+    <div class="tabs">
+      <div class="tab active-tab" onclick="sM('t','solid')" id="tTS">SOLID</div>
+      <div class="tab" onclick="sM('t','rainbow')" id="tTR">SPECTRAL</div>
+      <div class="tab" onclick="sM('t','chase')" id="tTC">CHASE</div>
+    </div>
+    <div id="tSC">
+      <div class="zone-row">
+        <div class="zone-picker">
+          <div class="zone-lbl">LEFT TURN</div>
+          <input type="color" value="#FFA500" onchange="sendColor('/tcolor_l', this.value)">
+        </div>
+        <div class="zone-picker">
+          <div class="zone-lbl">RIGHT TURN</div>
+          <input type="color" value="#FFA500" onchange="sendColor('/tcolor_r', this.value)">
+        </div>
+      </div>
+    </div>
+    <div id="tRC" style="display:none;"><div class="rainbow-badge">SPECTRAL WIPE ACTIVE</div></div>
+
+    <!-- Wipe Speed -->
+    <div style="margin-top:16px;">
+      <div class="field-lbl">WIPE SPEED <span id="wipeVal">35ms</span></div>
+      <div class="speed-row">
+        <span class="speed-icon">🐇</span>
+        <input type="range" min="10" max="80" value="35" oninput="uWipe(this.value)" onchange="fetch('/wipe?val='+this.value)" style="flex:1;">
+        <span class="speed-icon">🐢</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- SHOWROOM -->
+  <button class="btn-showroom" id="srBtn" onclick="tS()">▶ ACTIVATE SHOWROOM</button>
+
+  <!-- TUNER TOOLS -->
+  <div class="card">
+    <div class="tuner-toggle" onclick="toggleTuner()">
+      <div class="tuner-title">⚙ TUNER TOOLS</div>
+      <div class="tuner-arrow" id="tunerArrow">▼</div>
+    </div>
+
+    <div class="tuner-body" id="tunerBody">
+
+      <div class="field-row">
+        <div class="field-lbl">LED COUNT — PER SIDE <span id="ledCountVal">20</span></div>
+        <input type="number" value="20" min="1" max="150" oninput="document.getElementById('ledCountVal').innerText=this.value" onchange="fetch('/setleds?val='+this.value)">
+      </div>
+
+      <div class="toggle-row">
+        <div class="toggle-lbl">SWAP LEFT / RIGHT</div>
+        <button class="pill-btn" id="invBtn" onclick="toggleInvert()">NORMAL</button>
+      </div>
+
+      <div class="field-row">
+        <div class="field-lbl">TIMING FINE-TUNE <span id="fineVal">0ms</span></div>
+        <div class="speed-row">
+          <span style="font-family:'JetBrains Mono',monospace;font-size:0.6rem;color:var(--muted);">-15</span>
+          <input type="range" min="-15" max="15" value="0" oninput="uF(this.value)" onchange="fetch('/fine?val='+this.value)" style="flex:1;">
+          <span style="font-family:'JetBrains Mono',monospace;font-size:0.6rem;color:var(--muted);">+15</span>
+        </div>
+      </div>
+
+      <button class="btn-sync" onclick="this.innerText='⏳ WAITING FOR BLINKER...'; fetch('/sync')">↺ RE-LEARN BLINK TIMING</button>
+
+      <div class="debug-panel" id="db">
+        WIPE_SPD: <span style="float:right;color:#fff" id="dbSpd">35ms</span><br>
+        OFFSET:   <span style="float:right;color:#fff" id="dbOffset">0ms</span><br>
+        FREE_HEAP: <span style="float:right;color:#fff">218 KB</span><br>
+        UPTIME:   <span style="float:right;color:#fff">00:04:12</span>
+      </div>
+
+      <button class="btn-reset" onclick="if(confirm('Factory reset? All settings will be erased.')) fetch('/reset')">⚠ FACTORY RESET DEVICE</button>
+    </div>
+  </div>
+
+</div><!-- /app -->
+
+<script>
+  // ── Fetch wrapper (GET only, same as firmware) ──
+  function fetch(url) {
+    var x = new XMLHttpRequest();
+    x.open('GET', url, true);
+    x.onload = function() {
+      if (url.includes('/invert') || url.includes('/reset') || url.includes('/setleds')) location.reload();
+    };
+    x.send();
+  }
+
+  // ── Brightness ──
+  function uB(v) {
+    let pct = Math.round((v / 255) * 100);
+    document.getElementById('bPct').innerText = pct + '%';
+    document.getElementById('bVal').innerHTML = v + '<span class="bright-unit"> / 255</span>';
+  }
+
+  // ── Fine-tune ──
+  function uF(v) {
+    document.getElementById('fineVal').innerText = (v > 0 ? '+' : '') + v + 'ms';
+    document.getElementById('dbOffset').innerText = (v > 0 ? '+' : '') + v + 'ms';
+  }
+
+  // ── Wipe speed ──
+  function uWipe(v) {
+    document.getElementById('wipeVal').innerText = v + 'ms';
+    document.getElementById('dbSpd').innerText = v + 'ms';
+  }
+
+  // ── Brake mode ──
+  function sB(mode) {
+    ['b0','b1','b2','b3','b4'].forEach((id,i) => {
+      document.getElementById(id).className = 'tab' + (i === mode ? ' active-tab' : '');
+    });
+    fetch('/bmode?val=' + mode);
+  }
+
+  // ── DRL / Turn mode ──
+  function sM(type, mode) {
+    const isR = mode !== 'solid';
+    if (type === 'd') {
+      ['tDS','tDR','tDB','tDC'].forEach(id => document.getElementById(id).className = 'tab');
+      const map = {solid:'tDS', rainbow:'tDR', breathe:'tDB', chase:'tDC'};
+      document.getElementById(map[mode]).className = 'tab active-tab';
+      document.getElementById('dSC').style.display = (mode === 'solid') ? 'block' : 'none';
+      document.getElementById('dRC').style.display  = (mode !== 'solid') ? 'block' : 'none';
+      fetch('/mode_d?val=' + mode);
+    } else {
+      ['tTS','tTR','tTC'].forEach(id => document.getElementById(id).className = 'tab');
+      const map = {solid:'tTS', rainbow:'tTR', chase:'tTC'};
+      document.getElementById(map[mode]).className = 'tab active-tab';
+      document.getElementById('tSC').style.display = (mode === 'solid') ? 'block' : 'none';
+      document.getElementById('tRC').style.display  = (mode !== 'solid') ? 'block' : 'none';
+      fetch('/mode_t?val=' + mode);
+    }
+  }
+
+  // ── Color helpers ──
+  function sendColor(endpoint, hex) {
+    fetch(endpoint + '?val=' + hex.replace('#', ''));
+  }
+  function syncBrakeColors() {
+    const v = document.getElementById('bColorL').value;
+    document.getElementById('bColorR').value = v;
+    sendColor('/bcolor_r', v);
+    sendColor('/bcolor_l', v);
+  }
+  function syncDRLColors() {}
+
+  // ── Tuner ──
+  function toggleTuner() {
+    const body = document.getElementById('tunerBody');
+    const arrow = document.getElementById('tunerArrow');
+    const open = body.classList.toggle('open');
+    arrow.classList.toggle('open', open);
+  }
+
+  // ── Invert ──
+  let inv = false;
+  function toggleInvert() {
+    inv = !inv;
+    const btn = document.getElementById('invBtn');
+    btn.innerText = inv ? 'INVERTED' : 'NORMAL';
+    btn.className = 'pill-btn' + (inv ? ' inverted' : '');
+    fetch('/invert');
+  }
+
+  // ── Showroom ──
+  function tS() {
+    const btn = document.getElementById('srBtn');
+    const active = btn.classList.toggle('active');
+    btn.innerText = active ? '■ DEACTIVATE SHOWROOM' : '▶ ACTIVATE SHOWROOM';
+    fetch('/showroom?state=' + (active ? 'on' : 'off'));
+  }
+
+  // ── Debug unlock (triple-tap logo) ──
+  let tC = 0;
+  function dCheck() {
+    tC++;
+    if (tC >= 3) document.getElementById('db').style.display = 'block';
+    setTimeout(() => tC = 0, 1000);
+  }
+
+  // ── Status bar demo simulation (replace with /status polling on device) ──
+  function pollStatus() {
+    var x = new XMLHttpRequest();
+    x.open('GET', '/status', true);
+    x.onload = function() {
+      try {
+        var d = JSON.parse(x.responseText);
+        setSignal('DRL', d.drl);
+        setSignal('BRK', d.brake);
+        setSignal('TL', d.turnL);
+        setSignal('TR', d.turnR);
+      } catch(e) {}
+    };
+    x.send();
+  }
+  function setSignal(sig, active) {
+    var el = document.getElementById('sig' + sig);
+    var st = document.getElementById('s' + sig);
+    if (active) { el.classList.add('active-sig'); st.innerText = 'ON'; }
+    else { el.classList.remove('active-sig'); st.innerText = 'OFF'; }
+  }
+  // Poll every 500ms when on real device
+  // setInterval(pollStatus, 500);
+</script>
+</body>
+</html>
