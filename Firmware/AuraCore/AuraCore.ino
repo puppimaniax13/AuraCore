@@ -80,7 +80,9 @@ CRGB hexToColor(const String& hex) {
 }
 
 // UI is served from LittleFS: Firmware/AuraCore/data/index.html
-// Upload via Arduino IDE -> Tools -> ESP32 LittleFS Data Upload
+// To update the UI: Tools -> ESP32 LittleFS Data Upload  (no recompile needed)
+// Plugin: github.com/lorol/arduino-esp32fs-plugin  (one-time install)
+// Board partition scheme must include a SPIFFS/data partition
 
 // ─── Save / Load ──────────────────────────────────────────────────────────────
 
