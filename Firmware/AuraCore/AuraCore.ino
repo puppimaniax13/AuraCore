@@ -92,21 +92,10 @@ String getHTML() {
   h += F("@keyframes pulse-dot{0%,100%{opacity:1;}50%{opacity:0.4;}}");
   h += F(".divider{height:1px;background:linear-gradient(90deg,transparent,var(--border2),transparent);margin:4px 0 18px;}");
 
-  // Status bar
-  h += F(".status-bar{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:8px;margin-bottom:18px;}");
-  h += F(".sig{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:10px 6px;text-align:center;transition:all 0.2s;position:relative;overflow:hidden;}");
-  h += F(".sig::before{content:'';position:absolute;inset:0;opacity:0;transition:opacity 0.2s;}");
-  h += F(".sig.active-sig{border-color:currentColor;}.sig.active-sig::before{opacity:0.07;background:currentColor;}");
-  h += F(".sig-icon{font-size:1.1rem;line-height:1;margin-bottom:4px;}");
-  h += F(".sig-label{font-family:'JetBrains Mono','Menlo','Consolas',monospace;font-size:0.62rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;}");
-  h += F(".sig-state{font-family:'JetBrains Mono','Menlo','Consolas',monospace;font-size:0.65rem;font-weight:700;margin-top:2px;}");
-  h += F(".sig.drl{color:var(--blue);}.sig.brk{color:var(--red);}.sig.tl{color:var(--amber);}.sig.tr{color:var(--amber);}");
-
-  // Car / Card / Shared
-  h += F(".car-section,.card{background:var(--card);border:1px solid var(--border);border-radius:18px;padding:18px;margin-bottom:14px;}");
-  h += F(".section-label,.card-tag{font-family:'JetBrains Mono','Menlo','Consolas',monospace;font-size:0.65rem;color:var(--muted);letter-spacing:2px;text-transform:uppercase;}");
+  // Card
+  h += F(".card{background:var(--card);border:1px solid var(--border);border-radius:18px;padding:18px;margin-bottom:14px;}");
+  h += F(".card-tag{font-family:'JetBrains Mono','Menlo','Consolas',monospace;font-size:0.65rem;color:var(--muted);letter-spacing:2px;text-transform:uppercase;background:var(--dim);border-radius:6px;padding:3px 8px;}");
   h += F(".card-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;}");
-  h += F(".card-tag{background:var(--dim);border-radius:6px;padding:3px 8px;}");
   h += F(".card-title{font-weight:700;font-size:0.85rem;letter-spacing:2px;text-transform:uppercase;}");
 
   // Range inputs
@@ -172,46 +161,11 @@ String getHTML() {
   h += F("<div class='conn-badge' onclick='dCheck()'><div class='conn-dot'></div>ONLINE</div></div>");
   h += F("<div class='divider'></div>");
 
-  // ── Status bar ──
-  h += F("<div class='status-bar'>");
-  h += F("<div class='sig drl' id='sigDRL'><div class='sig-icon'>💡</div><div class='sig-label'>DRL</div><div class='sig-state' id='sDRL'>OFF</div></div>");
-  h += F("<div class='sig brk' id='sigBRK'><div class='sig-icon'>🔴</div><div class='sig-label'>BRAKE</div><div class='sig-state' id='sBRK'>OFF</div></div>");
-  h += F("<div class='sig tl'  id='sigTL'> <div class='sig-icon'>◀</div>  <div class='sig-label'>LEFT</div> <div class='sig-state' id='sTL'>OFF</div></div>");
-  h += F("<div class='sig tr'  id='sigTR'> <div class='sig-icon'>▶</div>  <div class='sig-label'>RIGHT</div><div class='sig-state' id='sTR'>OFF</div></div>");
-  h += F("</div>");
-
-  // ── Car diagram ──
-  h += F("<div class='car-section'><div class='section-label' style='margin-bottom:14px;'>LED ZONE MAP</div>");
-  h += F("<svg viewBox='0 0 300 160' xmlns='http://www.w3.org/2000/svg' style='width:100%;max-width:340px;display:block;margin:0 auto;'>");
-  h += F("<defs><filter id='glow'><feGaussianBlur stdDeviation='2.5' result='blur'/><feMerge><feMergeNode in='blur'/><feMergeNode in='SourceGraphic'/></feMerge></filter>");
-  h += F("<linearGradient id='bg' x1='0' y1='0' x2='0' y2='1'><stop offset='0%' stop-color='#1e252e'/><stop offset='100%' stop-color='#111820'/></linearGradient></defs>");
-  h += F("<rect x='60' y='30' width='180' height='100' rx='16' fill='url(#bg)' stroke='#2a3340' stroke-width='1.5'/>");
-  h += F("<rect x='90' y='18' width='120' height='28' rx='8' fill='#131a22' stroke='#2a3340' stroke-width='1'/>");
-  h += F("<rect x='94' y='20' width='112' height='24' rx='6' fill='#0d1520' opacity='0.8'/>");
-  h += F("<circle cx='100' cy='130' r='14' fill='#0a0e14' stroke='#2a3340' stroke-width='2'/><circle cx='100' cy='130' r='7' fill='#13171c' stroke='#1e252e' stroke-width='1'/>");
-  h += F("<circle cx='200' cy='130' r='14' fill='#0a0e14' stroke='#2a3340' stroke-width='2'/><circle cx='200' cy='130' r='7' fill='#13171c' stroke='#1e252e' stroke-width='1'/>");
-  // Left rear zone
-  h += "<rect x='62' y='45' width='18' height='50' rx='5' fill='#" + colorToHex(settings.brakeColorL) + "22' stroke='#" + colorToHex(settings.brakeColorL) + "' stroke-width='1.5' filter='url(#glow)'/>";
-  h += F("<text x='71' y='100' font-family='monospace' font-size='8' fill='#4a5a6a' text-anchor='middle'>L</text>");
-  // Right rear zone
-  h += "<rect x='220' y='45' width='18' height='50' rx='5' fill='#" + colorToHex(settings.brakeColorR) + "22' stroke='#" + colorToHex(settings.brakeColorR) + "' stroke-width='1.5' filter='url(#glow)'/>";
-  h += F("<text x='229' y='100' font-family='monospace' font-size='8' fill='#4a5a6a' text-anchor='middle'>R</text>");
-  h += F("<rect x='120' y='58' width='60' height='8' rx='3' fill='#0a1018' stroke='#1e252e' stroke-width='1'/>");
-  h += F("<rect x='120' y='74' width='60' height='8' rx='3' fill='#0a1018' stroke='#1e252e' stroke-width='1'/>");
-  h += F("<rect x='120' y='90' width='60' height='8' rx='3' fill='#0a1018' stroke='#1e252e' stroke-width='1'/>");
-  h += F("<text x='150' y='150' font-family='monospace' font-size='7' fill='#3a4a5a' text-anchor='middle'>REAR VIEW</text>");
-  h += F("</svg>");
-  h += F("<div style='display:flex;gap:10px;margin-top:12px;justify-content:center;'>");
-  h += F("<div style='display:flex;align-items:center;gap:5px;'><div style='width:10px;height:10px;border-radius:2px;background:#ff3a3a;box-shadow:0 0 6px #ff3a3a;'></div><span style='font-family:JetBrains Mono,monospace;font-size:0.55rem;color:#4a5a6a;'>BRAKE/DRL</span></div>");
-  h += F("<div style='display:flex;align-items:center;gap:5px;'><div style='width:10px;height:10px;border-radius:2px;background:#ffbf00;box-shadow:0 0 6px #ffbf00;'></div><span style='font-family:JetBrains Mono,monospace;font-size:0.55rem;color:#4a5a6a;'>TURN SIGNAL</span></div>");
-  h += F("</div></div>");
-
   // ── Brightness ──
   int bPct = round((settings.brightness / 255.0) * 100);
-  h += F("<div class='card'><div class='card-header'><div class='card-title'>BRIGHTNESS</div><div class='card-tag' id='bPct'>");
-  h += String(bPct); h += F("%</div></div><div class='bright-row'>");
-  h += "<input type='range' min='0' max='255' value='" + String(settings.brightness) + "' oninput='uB(this.value)' onchange=\"req('/bright?val='+this.value)\" style='flex:1;'>";
-  h += "<div class='bright-val' id='bVal'>" + String(settings.brightness) + "<span class='bright-unit'> / 255</span></div>";
+  h += F("<div class='card'><div class='card-header'><div class='card-title'>BRIGHTNESS</div></div><div class='bright-row'>");
+  h += "<input type='range' min='0' max='100' value='" + String(bPct) + "' oninput='uB(this.value)' onchange=\"req('/bright?val='+Math.round(this.value*2.55))\" style='flex:1;'>";
+  h += "<div class='bright-val' id='bVal'>" + String(bPct) + "<span class='bright-unit'>%</span></div>";
   h += F("</div></div>");
 
   // ── Brake ──
@@ -301,7 +255,7 @@ String getHTML() {
   // Toast
   h += F("var _tt;function toast(m){var t=document.getElementById('toast');t.innerText=m;t.classList.add('show');clearTimeout(_tt);_tt=setTimeout(function(){t.classList.remove('show');},1400);}");
   // UI helpers
-  h += F("function uB(v){var p=Math.round((v/255)*100);document.getElementById('bPct').innerText=p+'%';document.getElementById('bVal').innerHTML=v+'<span class=\"bright-unit\"> / 255</span>';}");
+  h += F("function uB(v){document.getElementById('bVal').innerHTML=v+'<span class=\"bright-unit\">%</span>';}");
   h += F("function uF(v){var s=(v>0?'+':'')+v+'ms';document.getElementById('fineVal').innerText=s;document.getElementById('dbOffset').innerText=s;}");
   h += F("function sB(m){['b0','b1','b2','b3','b4'].forEach(function(id,i){document.getElementById(id).className='tab'+(i===m?' active-tab':'');});req('/bmode?val='+m);}");
   h += F("function sM(t,m){");
@@ -322,11 +276,9 @@ String getHTML() {
   h += F("function startLearn(){var b=document.getElementById('learnBtn');b.innerText='&#9203; WAITING FOR BLINKER...';b.disabled=true;req('/sync');setTimeout(function(){b.innerHTML='&#8634; RE-LEARN BLINK TIMING';b.disabled=false;},6000);}");
   h += F("var _dTap=0;function dCheck(){_dTap++;if(_dTap>=3)document.getElementById('db').style.display='block';setTimeout(function(){_dTap=0;},1000);}");
   // Status polling
-  h += F("function setSig(s,on){var el=document.getElementById('sig'+s);var st=document.getElementById('s'+s);");
-  h += F("if(on){el.classList.add('active-sig');st.innerText='ON';}else{el.classList.remove('active-sig');st.innerText='OFF';}}");
   h += F("function pollStatus(){var x=new XMLHttpRequest();x.open('GET','/status',true);");
-  h += F("x.onload=function(){try{var d=JSON.parse(x.responseText);setSig('DRL',d.drl);setSig('BRK',d.brake);setSig('TL',d.turnL);setSig('TR',d.turnR);document.getElementById('dbHeap').innerText=d.heap+'B';}catch(e){}};x.send();}");
-  h += F("setInterval(pollStatus,500);");
+  h += F("x.onload=function(){try{document.getElementById('dbHeap').innerText=JSON.parse(x.responseText).heap+'B';}catch(e){}};x.send();}");
+  h += F("setInterval(pollStatus,2000);");
   h += F("</script></body></html>");
 
   return h;
