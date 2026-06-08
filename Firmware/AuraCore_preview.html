@@ -472,6 +472,19 @@
     </div>
   </div>
 
+  <!-- REVERSE -->
+  <div class="card" id="reverseCard">
+    <div class="card-header">
+      <div class="card-title">REVERSE</div>
+      <div class="card-tag">AUTO-WHITE</div>
+    </div>
+    <div class="tabs">
+      <div class="tab active-tab" onclick="sR(0)" id="r0">SOLID</div>
+      <div class="tab"            onclick="sR(1)" id="r1">FADE IN</div>
+    </div>
+    <div style="margin-top:14px;height:8px;border-radius:4px;background:#fff;box-shadow:0 0 16px rgba(255,255,255,0.5);opacity:0.3;"></div>
+  </div>
+
   <!-- DRL -->
   <div class="card" id="drlCard">
     <div class="card-header">
@@ -653,6 +666,14 @@
       document.getElementById(id).className = 'tab' + (i === mode ? ' active-tab' : '');
     });
     req('/bmode?val=' + mode);
+  }
+
+  // ── Reverse mode ─────────────────────────────────────────────────────────────
+  function sR(mode) {
+    ['r0','r1'].forEach(function(id, i) {
+      document.getElementById(id).className = 'tab' + (i === mode ? ' active-tab' : '');
+    });
+    req('/rmode?val=' + mode);
   }
 
   // ── DRL / Turn mode ──────────────────────────────────────────────────────────

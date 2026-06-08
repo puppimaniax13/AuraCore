@@ -4,13 +4,14 @@
 #include <Preferences.h>
 #include <ArduinoJson.h>   // Add "ArduinoJson" by Benoit Blanchon in Library Manager
 
-#define MAX_LEDS        150
-#define GPIO_DRL_IN     4
-#define GPIO_BRAKE_IN   5
-#define GPIO_TURN_L_IN  7
-#define GPIO_TURN_R_IN  11
-#define GPIO_DATA_1     9
-#define GPIO_DATA_2     10
+#define MAX_LEDS         150
+#define GPIO_DRL_IN      4
+#define GPIO_BRAKE_IN    5
+#define GPIO_TURN_L_IN   7
+#define GPIO_TURN_R_IN   11
+#define GPIO_REVERSE_IN  12
+#define GPIO_DATA_1      9
+#define GPIO_DATA_2      10
 
 CRGB leds1[MAX_LEDS];
 CRGB leds2[MAX_LEDS];
@@ -35,14 +36,28 @@ struct Config {
   uint8_t  turnMode;
   // Brake mode: 0=solid, 1=F1 strobe, 2=2-tap, 3=pulse, 4=fade-in
   uint8_t  brakeMode;
+  // Reverse mode: 0=solid white, 1=fade-in white
+  // Color is always white — upgrade to SK6812 RGBW for best white quality
+  uint8_t  reverseMode;
   uint16_t wipeSpeed;
   int8_t   fineTune;
   uint16_t numLeds;
 } settings;
 
-unsigned long turnStartL = 0, turnStartR = 0;
-unsigned long brakeStartTime = 0;
+// Per-side turn animation state machine
+struct TurnAnim {
+  bool          wasOn     = false;
+  int           progress  = 0;       // LEDs lit so far (0..numLeds)
+  unsigned long lastStep  = 0;       // time of last LED increment
+  unsigned long syncStart = 0;       // for re-learn timing
+  bool          holding   = false;   // wipe complete, holding until signal drops
+};
+TurnAnim animL, animR;
+
+unsigned long brakeStartTime   = 0;
 unsigned long lastBrakeRelease = 0;
+unsigned long reverseStartTime = 0;
+bool wasReversing   = false;
 bool isBraking      = false;
 bool showroomActive = false;
 bool isSyncing      = false;
@@ -183,6 +198,16 @@ String getHTML() {
   h += "<div class='zone-picker'><div class='zone-lbl'>RIGHT SIDE</div><input type='color' id='bColorR' value='#" + colorToHex(settings.brakeColorR) + "' onchange=\"sendColor('/bcolor_r',this.value)\"></div>";
   h += F("</div><div class='sync-row'><button class='sync-btn' onclick='syncBrakeColors()'>&#8596; SYNC L/R</button></div></div>");
 
+  // ── Reverse ──
+  String rm[2] = {"",""};
+  rm[settings.reverseMode] = "active-tab";
+  h += F("<div class='card'><div class='card-header'><div class='card-title'>REVERSE</div><div class='card-tag'>AUTO-WHITE</div></div>");
+  h += F("<div class='tabs'>");
+  h += "<div class='tab " + rm[0] + "' onclick='sR(0)' id='r0'>SOLID</div>";
+  h += "<div class='tab " + rm[1] + "' onclick='sR(1)' id='r1'>FADE IN</div>";
+  h += F("</div>");
+  h += F("<div style='margin-top:14px;height:8px;border-radius:4px;background:#ffffff;box-shadow:0 0 16px rgba(255,255,255,0.5);opacity:0.3;'></div></div>");
+
   // ── DRL ──
   String dm[4] = {"","","",""};
   dm[settings.drlMode] = "active-tab";
@@ -258,6 +283,7 @@ String getHTML() {
   h += F("function uB(v){document.getElementById('bVal').innerHTML=v+'<span class=\"bright-unit\">%</span>';}");
   h += F("function uF(v){var s=(v>0?'+':'')+v+'ms';document.getElementById('fineVal').innerText=s;document.getElementById('dbOffset').innerText=s;}");
   h += F("function sB(m){['b0','b1','b2','b3','b4'].forEach(function(id,i){document.getElementById(id).className='tab'+(i===m?' active-tab':'');});req('/bmode?val='+m);}");
+  h += F("function sR(m){['r0','r1'].forEach(function(id,i){document.getElementById(id).className='tab'+(i===m?' active-tab':'');});req('/rmode?val='+m);}");
   h += F("function sM(t,m){");
   h += F("if(t==='d'){['tDS','tDR','tDB','tDC'].forEach(function(id){document.getElementById(id).className='tab';});");
   h += F("var dm={solid:'tDS',rainbow:'tDR',breathe:'tDB',chase:'tDC'};document.getElementById(dm[m]).className='tab active-tab';");
@@ -299,6 +325,7 @@ void saveConfig() {
   prefs.putUChar("drlM", settings.drlMode);
   prefs.putUChar("trnM", settings.turnMode);
   prefs.putUChar("brkM", settings.brakeMode);
+  prefs.putUChar("revM", settings.reverseMode);
   prefs.putUInt("spd",   settings.wipeSpeed);
   prefs.putChar("fine",  settings.fineTune);
   prefs.putUInt("nled",  settings.numLeds);
@@ -317,7 +344,8 @@ void loadConfig() {
   settings.invert      = prefs.getBool("inv",   false);
   settings.drlMode     = prefs.getUChar("drlM", 0);
   settings.turnMode    = prefs.getUChar("trnM", 0);
-  settings.brakeMode   = prefs.getUChar("brkM", 0);
+  settings.brakeMode   = prefs.getUChar("brkM",  0);
+  settings.reverseMode = prefs.getUChar("revM",  0);
   settings.wipeSpeed   = prefs.getUInt("spd",   35);
   settings.fineTune    = prefs.getChar("fine",  0);
   settings.numLeds     = prefs.getUInt("nled",  20);
@@ -380,38 +408,91 @@ void applyBrake(CRGB* strip, CRGB color, uint8_t mode, unsigned long now) {
   }
 }
 
-void handleSideLogic(int turnGpio, CRGB* strip, CRGB turnColor, CRGB drlColor, CRGB brakeColor, unsigned long& startTime) {
-  bool turnActive  = digitalRead(turnGpio);
-  bool brakeActive = digitalRead(GPIO_BRAKE_IN);
-  unsigned long now = millis();
+// Returns a solid base color for the turn-wipe background.
+// Priority: reverse > brake (solid) > DRL (solid) > black
+CRGB getBase(bool revOn, bool brkOn, bool drlOn, CRGB brakeC, CRGB drlC) {
+  if (revOn) return CRGB::White;
+  if (brkOn) return brakeC;
+  if (drlOn) return drlC;
+  return CRGB::Black;
+}
 
-  if (turnActive) {
-    if (startTime == 0) startTime = now;
-    int progress = (now - startTime) / max((int)(settings.wipeSpeed + settings.fineTune), 1);
-    fadeToBlackBy(strip, settings.numLeds, 110);
-    for (int i = 0; i < min((int)progress, (int)settings.numLeds); i++) {
-      if (settings.turnMode == 1) strip[i] = CHSV((now / 10) + (i * 15), 255, 255);
-      else if (settings.turnMode == 2) { fill_solid(strip, settings.numLeds, CRGB::Black); strip[i] = turnColor; }
-      else strip[i] = turnColor;
-    }
-  } else {
-    if (startTime != 0) {
-      uint16_t dur = now - startTime;
-      if (dur > 150 && isSyncing) { settings.wipeSpeed = dur / settings.numLeds; isSyncing = false; saveConfig(); }
-      startTime = 0;
-    }
-    if (brakeActive) {
-      if (!isBraking) { brakeStartTime = now; isBraking = true; }
-      bool lockout = (now - lastBrakeRelease < 3000);
-      if (lockout) fill_solid(strip, settings.numLeds, brakeColor);
-      else applyBrake(strip, brakeColor, settings.brakeMode, now);
+// Applies the full animated base state to a strip when no turn is active.
+// Priority: reverse > brake > DRL > off
+void applyBase(CRGB* strip, bool revOn, bool brkOn, bool drlOn,
+               CRGB brakeC, CRGB drlC, unsigned long now) {
+  if (revOn) {
+    if (settings.reverseMode == 1) {
+      // Fade-in: ramp to white over 700ms
+      uint8_t bri = (uint8_t)min((unsigned long)255, (now - reverseStartTime) * 255UL / 700);
+      CRGB w = CRGB::White; w.nscale8(bri);
+      fill_solid(strip, settings.numLeds, w);
     } else {
-      if (isBraking) { lastBrakeRelease = now; isBraking = false; }
-      if (digitalRead(GPIO_DRL_IN))
-        applyDRL(strip, drlColor, settings.drlMode, now);
-      else fill_solid(strip, settings.numLeds, CRGB::Black);
+      fill_solid(strip, settings.numLeds, CRGB::White);
+    }
+  } else if (brkOn) {
+    bool lockout = (now - lastBrakeRelease < 3000);
+    if (lockout) fill_solid(strip, settings.numLeds, brakeC);
+    else applyBrake(strip, brakeC, settings.brakeMode, now);
+  } else if (drlOn) {
+    applyDRL(strip, drlC, settings.drlMode, now);
+  } else {
+    fill_solid(strip, settings.numLeds, CRGB::Black);
+  }
+}
+
+// Steps the turn-signal state machine and renders to the strip.
+// When on: wipes turn color over the base color, then holds.
+// When off: resets state.
+void stepTurn(TurnAnim& anim, bool on, CRGB* strip,
+              CRGB turnColor, CRGB baseColor, unsigned long now) {
+  bool risingEdge  = on  && !anim.wasOn;
+  bool fallingEdge = !on && anim.wasOn;
+
+  if (risingEdge) {
+    anim.progress = 0;
+    anim.holding  = false;
+    anim.lastStep = now;
+    if (isSyncing) anim.syncStart = now;
+  }
+
+  if (on) {
+    // Advance wipe one LED per wipeSpeed ms
+    if (!anim.holding) {
+      int stepMs = max((int)settings.wipeSpeed + (int)settings.fineTune, 1);
+      while ((long)(now - anim.lastStep) >= stepMs && anim.progress < settings.numLeds) {
+        anim.progress++;
+        anim.lastStep += stepMs;
+      }
+      if (anim.progress >= settings.numLeds) anim.holding = true;
+    }
+
+    // Render: fill base, overlay wipe
+    fill_solid(strip, settings.numLeds, baseColor);
+    if (settings.turnMode == 2) {
+      // Chase: single leading-edge dot
+      if (anim.progress > 0) strip[anim.progress - 1] = turnColor;
+    } else {
+      for (int i = 0; i < anim.progress; i++) {
+        strip[i] = (settings.turnMode == 1)
+          ? CHSV((uint8_t)(now / 10 + i * 15), 255, 255)
+          : turnColor;
+      }
     }
   }
+
+  if (fallingEdge) {
+    // Re-learn: if syncing, measure one blink duration and set wipeSpeed
+    if (isSyncing && anim.syncStart > 0) {
+      uint16_t dur = now - anim.syncStart;
+      if (dur > 150) { settings.wipeSpeed = dur / settings.numLeds; isSyncing = false; saveConfig(); }
+      anim.syncStart = 0;
+    }
+    anim.progress = 0;
+    anim.holding  = false;
+  }
+
+  anim.wasOn = on;
 }
 
 // ─── Setup ────────────────────────────────────────────────────────────────────
@@ -420,10 +501,11 @@ void setup() {
   Serial.begin(115200);
   loadConfig();
 
-  pinMode(GPIO_DRL_IN,    INPUT);
-  pinMode(GPIO_BRAKE_IN,  INPUT);
-  pinMode(GPIO_TURN_L_IN, INPUT);
-  pinMode(GPIO_TURN_R_IN, INPUT);
+  pinMode(GPIO_DRL_IN,     INPUT);
+  pinMode(GPIO_BRAKE_IN,   INPUT);
+  pinMode(GPIO_TURN_L_IN,  INPUT);
+  pinMode(GPIO_TURN_R_IN,  INPUT);
+  pinMode(GPIO_REVERSE_IN, INPUT);
 
   FastLED.addLeds<WS2812B, GPIO_DATA_1, GRB>(leds1, MAX_LEDS);
   FastLED.addLeds<WS2812B, GPIO_DATA_2, GRB>(leds2, MAX_LEDS);
@@ -485,6 +567,7 @@ void setup() {
   server.on("/setleds", HTTP_GET, [](AsyncWebServerRequest* r){ if(r->hasParam("val")){ settings.numLeds=min((uint16_t)r->getParam("val")->value().toInt(),(uint16_t)MAX_LEDS); saveConfig(); } r->send(200); });
   server.on("/invert",  HTTP_GET, [](AsyncWebServerRequest* r){ settings.invert=!settings.invert; saveConfig(); r->send(200); });
   server.on("/fine",    HTTP_GET, [](AsyncWebServerRequest* r){ if(r->hasParam("val")){ settings.fineTune=r->getParam("val")->value().toInt(); saveConfig(); } r->send(200); });
+  server.on("/rmode",   HTTP_GET, [](AsyncWebServerRequest* r){ if(r->hasParam("val")){ settings.reverseMode=r->getParam("val")->value().toInt(); saveConfig(); } r->send(200); });
   server.on("/sync",    HTTP_GET, [](AsyncWebServerRequest* r){ isSyncing=true; r->send(200); });
   server.on("/showroom",HTTP_GET, [](AsyncWebServerRequest* r){ if(r->hasParam("state")){ showroomActive=(r->getParam("state")->value()=="on"); } r->send(200); });
   server.on("/reset",   HTTP_GET, [](AsyncWebServerRequest* r){ prefs.begin("aura_core",false); prefs.clear(); prefs.end(); r->send(200); delay(500); ESP.restart(); });
@@ -495,14 +578,44 @@ void setup() {
 // ─── Loop ─────────────────────────────────────────────────────────────────────
 
 void loop() {
+  unsigned long now = millis();
+
   if (showroomActive) {
-    fill_rainbow(leds1, settings.numLeds, millis() / 20, 10);
-    fill_rainbow(leds2, settings.numLeds, millis() / 20, 10);
-  } else {
-    CRGB* leftStrip  = settings.invert ? leds2 : leds1;
-    CRGB* rightStrip = settings.invert ? leds1 : leds2;
-    handleSideLogic(GPIO_TURN_L_IN, leftStrip,  settings.turnColorL, settings.drlColorL, settings.brakeColorL, turnStartL);
-    handleSideLogic(GPIO_TURN_R_IN, rightStrip, settings.turnColorR, settings.drlColorR, settings.brakeColorR, turnStartR);
+    fill_rainbow(leds1, settings.numLeds, now / 20, 10);
+    fill_rainbow(leds2, settings.numLeds, now / 20, 10);
+    FastLED.show();
+    return;
   }
+
+  // Read all signals
+  bool drlOn = digitalRead(GPIO_DRL_IN);
+  bool brkOn = digitalRead(GPIO_BRAKE_IN);
+  bool revOn = digitalRead(GPIO_REVERSE_IN);
+  bool lTurn = digitalRead(GPIO_TURN_L_IN);
+  bool rTurn = digitalRead(GPIO_TURN_R_IN);
+
+  // Reverse rising-edge tracking (for fade-in start time)
+  if (revOn && !wasReversing) reverseStartTime = now;
+  wasReversing = revOn;
+
+  // Brake edge tracking (for animated brake modes)
+  if (brkOn && !isBraking)  { brakeStartTime = now; isBraking = true; }
+  if (!brkOn && isBraking)  { lastBrakeRelease = now; isBraking = false; }
+
+  CRGB* leftStrip  = settings.invert ? leds2 : leds1;
+  CRGB* rightStrip = settings.invert ? leds1 : leds2;
+
+  // Base color used behind the turn wipe (solid snapshot of current state)
+  CRGB baseL = getBase(revOn, brkOn, drlOn, settings.brakeColorL, settings.drlColorL);
+  CRGB baseR = getBase(revOn, brkOn, drlOn, settings.brakeColorR, settings.drlColorR);
+
+  // Left side: turn wipe over base, or full animated base
+  stepTurn(animL, lTurn, leftStrip, settings.turnColorL, baseL, now);
+  if (!lTurn) applyBase(leftStrip, revOn, brkOn, drlOn, settings.brakeColorL, settings.drlColorL, now);
+
+  // Right side
+  stepTurn(animR, rTurn, rightStrip, settings.turnColorR, baseR, now);
+  if (!rTurn) applyBase(rightStrip, revOn, brkOn, drlOn, settings.brakeColorR, settings.drlColorR, now);
+
   FastLED.show();
 }
