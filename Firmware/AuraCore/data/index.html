@@ -153,11 +153,20 @@
       <div class="tab"            onclick="sB(3)" id="b3">PULSE</div>
       <div class="tab"            onclick="sB(4)" id="b4">FADE</div>
     </div>
-    <div class="zone-row">
-      <div class="zone-picker"><div class="zone-lbl">LEFT SIDE</div><input type="color" id="bColorL" value="#FF0000" onchange="sendColor('/bcolor_l',this.value)"></div>
-      <div class="zone-picker"><div class="zone-lbl">RIGHT SIDE</div><input type="color" id="bColorR" value="#FF0000" onchange="sendColor('/bcolor_r',this.value)"></div>
+    <div id="bSync" style="margin-top:14px;">
+      <div class="zone-picker">
+        <div class="zone-lbl">COLOR — BOTH SIDES</div>
+        <input type="color" id="bColorSync" value="#FF0000" onchange="syncColorChange('b',this.value)">
+      </div>
+      <div class="sync-row"><button class="sync-btn" onclick="splitColors('b')">SPLIT L / R</button></div>
     </div>
-    <div class="sync-row"><button class="sync-btn" onclick="syncBrakeColors()">↔ SYNC L/R</button></div>
+    <div id="bSplit" style="display:none;">
+      <div class="zone-row">
+        <div class="zone-picker"><div class="zone-lbl">LEFT SIDE</div><input type="color" id="bColorL" value="#FF0000" onchange="sendColor('/bcolor_l',this.value)"></div>
+        <div class="zone-picker"><div class="zone-lbl">RIGHT SIDE</div><input type="color" id="bColorR" value="#FF0000" onchange="sendColor('/bcolor_r',this.value)"></div>
+      </div>
+      <div class="sync-row"><button class="sync-btn" onclick="matchColors('b')">MATCH L / R</button></div>
+    </div>
   </div>
 
   <!-- REVERSE -->
@@ -180,11 +189,20 @@
       <div class="tab"            onclick="sM('d','chase')"   id="tDC">CHASE</div>
     </div>
     <div id="dSC">
-      <div class="zone-row">
-        <div class="zone-picker"><div class="zone-lbl">LEFT SIDE</div><input type="color" id="dColorL" value="#E10000" onchange="sendColor('/drl_l',this.value)"></div>
-        <div class="zone-picker"><div class="zone-lbl">RIGHT SIDE</div><input type="color" id="dColorR" value="#E10000" onchange="sendColor('/drl_r',this.value)"></div>
+      <div id="dSync" style="margin-top:14px;">
+        <div class="zone-picker">
+          <div class="zone-lbl">COLOR — BOTH SIDES</div>
+          <input type="color" id="dColorSync" value="#E10000" onchange="syncColorChange('d',this.value)">
+        </div>
+        <div class="sync-row"><button class="sync-btn" onclick="splitColors('d')">SPLIT L / R</button></div>
       </div>
-      <div class="sync-row"><button class="sync-btn" onclick="syncDRLColors()">↔ SYNC L/R</button></div>
+      <div id="dSplit" style="display:none;">
+        <div class="zone-row">
+          <div class="zone-picker"><div class="zone-lbl">LEFT SIDE</div><input type="color" id="dColorL" value="#E10000" onchange="sendColor('/drl_l',this.value)"></div>
+          <div class="zone-picker"><div class="zone-lbl">RIGHT SIDE</div><input type="color" id="dColorR" value="#E10000" onchange="sendColor('/drl_r',this.value)"></div>
+        </div>
+        <div class="sync-row"><button class="sync-btn" onclick="matchColors('d')">MATCH L / R</button></div>
+      </div>
     </div>
     <div id="dRC" style="display:none;"><div class="rainbow-badge">RAINBOW ACTIVE</div></div>
   </div>
@@ -198,9 +216,19 @@
       <div class="tab"            onclick="sM('t','chase')"   id="tTC">CHASE</div>
     </div>
     <div id="tSC">
-      <div class="zone-row">
-        <div class="zone-picker"><div class="zone-lbl">LEFT TURN</div><input type="color" id="tColorL" value="#FFA500" onchange="sendColor('/tcolor_l',this.value)"></div>
-        <div class="zone-picker"><div class="zone-lbl">RIGHT TURN</div><input type="color" id="tColorR" value="#FFA500" onchange="sendColor('/tcolor_r',this.value)"></div>
+      <div id="tSync" style="margin-top:14px;">
+        <div class="zone-picker">
+          <div class="zone-lbl">COLOR — BOTH SIDES</div>
+          <input type="color" id="tColorSync" value="#FFA500" onchange="syncColorChange('t',this.value)">
+        </div>
+        <div class="sync-row"><button class="sync-btn" onclick="splitColors('t')">SPLIT L / R</button></div>
+      </div>
+      <div id="tSplit" style="display:none;">
+        <div class="zone-row">
+          <div class="zone-picker"><div class="zone-lbl">LEFT TURN</div><input type="color" id="tColorL" value="#FFA500" onchange="sendColor('/tcolor_l',this.value)"></div>
+          <div class="zone-picker"><div class="zone-lbl">RIGHT TURN</div><input type="color" id="tColorR" value="#FFA500" onchange="sendColor('/tcolor_r',this.value)"></div>
+        </div>
+        <div class="sync-row"><button class="sync-btn" onclick="matchColors('t')">MATCH L / R</button></div>
       </div>
     </div>
     <div id="tRC" style="display:none;"><div class="rainbow-badge">SPECTRAL WIPE ACTIVE</div></div>
@@ -309,17 +337,23 @@
       document.getElementById('brightSlider').value = c.brightness;
       uB(c.brightness);
       sB(c.brakeMode);
-      document.getElementById('bColorL').value = '#' + c.brakeColorL;
-      document.getElementById('bColorR').value = '#' + c.brakeColorR;
+      document.getElementById('bColorSync').value = '#' + c.brakeColorL;
+      document.getElementById('bColorL').value    = '#' + c.brakeColorL;
+      document.getElementById('bColorR').value    = '#' + c.brakeColorR;
+      if (c.brakeColorL !== c.brakeColorR) { document.getElementById('bSync').style.display='none'; document.getElementById('bSplit').style.display='block'; }
       sR(c.reverseMode);
       var drlNames  = ['solid','rainbow','breathe','chase'];
       var turnNames = ['solid','rainbow','chase'];
       sM('d', drlNames[c.drlMode]  || 'solid');
       sM('t', turnNames[c.turnMode] || 'solid');
-      document.getElementById('dColorL').value = '#' + c.drlColorL;
-      document.getElementById('dColorR').value = '#' + c.drlColorR;
-      document.getElementById('tColorL').value = '#' + c.turnColorL;
-      document.getElementById('tColorR').value = '#' + c.turnColorR;
+      document.getElementById('dColorSync').value = '#' + c.drlColorL;
+      document.getElementById('dColorL').value    = '#' + c.drlColorL;
+      document.getElementById('dColorR').value    = '#' + c.drlColorR;
+      if (c.drlColorL !== c.drlColorR) { document.getElementById('dSync').style.display='none'; document.getElementById('dSplit').style.display='block'; }
+      document.getElementById('tColorSync').value = '#' + c.turnColorL;
+      document.getElementById('tColorL').value    = '#' + c.turnColorL;
+      document.getElementById('tColorR').value    = '#' + c.turnColorR;
+      if (c.turnColorL !== c.turnColorR) { document.getElementById('tSync').style.display='none'; document.getElementById('tSplit').style.display='block'; }
       document.getElementById('wipeSlider').value = c.wipeSpeed;
       uWipe(c.wipeSpeed);
       document.getElementById('ledInput').value = c.numLeds;
@@ -372,8 +406,10 @@
 
   // ── Color helpers ────────────────────────────────────────────────────────────
   function sendColor(ep, hex) { req(ep+'?val='+hex.replace('#','')); }
-  function syncBrakeColors() { var v=document.getElementById('bColorL').value; document.getElementById('bColorR').value=v; req('/bcolor_l?val='+v.replace('#','')); req('/bcolor_r?val='+v.replace('#','')); }
-  function syncDRLColors()   { var v=document.getElementById('dColorL').value; document.getElementById('dColorR').value=v; req('/drl_l?val='+v.replace('#','')); req('/drl_r?val='+v.replace('#','')); }
+  var _cEp = { b:['/bcolor_l','/bcolor_r'], d:['/drl_l','/drl_r'], t:['/tcolor_l','/tcolor_r'] };
+  function syncColorChange(c, hex) { req(_cEp[c][0]+'?val='+hex.replace('#','')); req(_cEp[c][1]+'?val='+hex.replace('#','')); }
+  function splitColors(c) { var v=document.getElementById(c+'ColorSync').value; document.getElementById(c+'ColorL').value=v; document.getElementById(c+'ColorR').value=v; document.getElementById(c+'Sync').style.display='none'; document.getElementById(c+'Split').style.display='block'; }
+  function matchColors(c) { var v=document.getElementById(c+'ColorL').value; document.getElementById(c+'ColorR').value=v; document.getElementById(c+'ColorSync').value=v; document.getElementById(c+'Sync').style.display='block'; document.getElementById(c+'Split').style.display='none'; req(_cEp[c][0]+'?val='+v.replace('#','')); req(_cEp[c][1]+'?val='+v.replace('#','')); }
 
   // ── Tuner ────────────────────────────────────────────────────────────────────
   function toggleTuner() { var o=document.getElementById('tunerBody').classList.toggle('open'); document.getElementById('tunerArrow').classList.toggle('open',o); }
