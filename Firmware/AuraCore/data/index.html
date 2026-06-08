@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>AuraCore v2.0</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;600;700&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg:      #080a0c;
+      --surface: #0f1215;
+      --card:    #13171c;
+      --border:  #1e252e;
+      --border2: #2a3340;
+      --accent:  #ff6a00;
+      --accent2: #ffaa44;
+      --blue:    #3a8fff;
+      --green:   #2dff8e;
+      --red:     #ff3a3a;
+      --amber:   #ffbf00;
+      --text:    #cdd6e0;
+      --muted:   #4a5a6a;
+      --dim:     #232d38;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+    body {
+      background: var(--bg); color: var(--text);
+      font-family: 'Rajdhani','Arial Narrow',system-ui,sans-serif;
+      min-height: 100vh; display: flex; justify-content: center;
+      padding: 0 0 max(40px, env(safe-area-inset-bottom)) 0;
+    }
+    .app { width: 100%; max-width: 420px; padding: 0 14px; }
+
+    /* Header */
+    .header { padding: 28px 0 18px; display: flex; align-items: center; justify-content: space-between; }
+    .logo { display: flex; flex-direction: column; }
+    .logo-name { font-weight: 700; font-size: 1.6rem; letter-spacing: 5px; color: #fff; line-height: 1; }
+    .logo-name span { color: var(--accent); }
+    .logo-sub { font-family: 'JetBrains Mono','Menlo','Consolas',monospace; font-size: 0.6rem; color: var(--muted); letter-spacing: 3px; margin-top: 3px; }
+    .conn-badge { display: flex; align-items: center; gap: 6px; background: var(--card); border: 1px solid var(--border); border-radius: 20px; padding: 8px 14px; font-family: 'JetBrains Mono','Menlo','Consolas',monospace; font-size: 0.65rem; color: var(--green); cursor: pointer; user-select: none; }
+    .conn-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--green); box-shadow: 0 0 8px var(--green); animation: pulse-dot 2s infinite; flex-shrink: 0; }
+    @keyframes pulse-dot { 0%,100%{opacity:1;} 50%{opacity:0.4;} }
+    .divider { height: 1px; background: linear-gradient(90deg, transparent, var(--border2), transparent); margin: 4px 0 18px; }
+
+    /* Cards */
+    .card { background: var(--card); border: 1px solid var(--border); border-radius: 18px; padding: 18px; margin-bottom: 14px; }
+    .card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+    .card-title { font-weight: 700; font-size: 0.85rem; letter-spacing: 2px; text-transform: uppercase; }
+    .card-tag { font-family: 'JetBrains Mono','Menlo','Consolas',monospace; font-size: 0.65rem; color: var(--muted); background: var(--dim); border-radius: 6px; padding: 3px 8px; }
+
+    /* Brightness */
+    .bright-row { display: flex; align-items: center; gap: 14px; }
+    .bright-val { font-family: 'JetBrains Mono','Menlo','Consolas',monospace; font-size: 1.4rem; font-weight: 700; color: #fff; min-width: 46px; text-align: right; }
+    .bright-unit { font-size: 0.7rem; color: var(--muted); font-weight: 400; }
+
+    /* Range inputs */
+    input[type='range'] { -webkit-appearance: none; appearance: none; flex: 1; height: 6px; border-radius: 3px; background: var(--dim); outline: none; }
+    input[type='range']::-webkit-slider-thumb { -webkit-appearance: none; width: 26px; height: 26px; border-radius: 50%; background: var(--accent); border: 3px solid var(--bg); box-shadow: 0 0 10px rgba(255,106,0,0.5); cursor: pointer; }
+
+    /* Tabs */
+    .tabs { display: flex; gap: 6px; flex-wrap: wrap; }
+    .tab { flex: 1; min-width: 0; padding: 12px 4px; border-radius: 10px; border: 1px solid var(--border); background: var(--surface); color: var(--muted); font-family: 'Rajdhani','Arial Narrow',system-ui,sans-serif; font-weight: 700; font-size: 0.78rem; letter-spacing: 0.5px; text-align: center; cursor: pointer; transition: all 0.15s; user-select: none; }
+    .tab:active { transform: scale(0.96); }
+    .tab.active-tab { background: var(--dim); border-color: var(--accent); color: var(--accent); }
+
+    /* Color zone */
+    .zone-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 14px; }
+    .zone-picker { display: flex; flex-direction: column; gap: 6px; }
+    .zone-lbl { font-family: 'JetBrains Mono','Menlo','Consolas',monospace; font-size: 0.65rem; color: var(--muted); letter-spacing: 1.5px; text-transform: uppercase; }
+    input[type='color'] { width: 100%; height: 52px; border: 1px solid var(--border2); border-radius: 10px; background: var(--surface); cursor: pointer; padding: 4px; }
+    .sync-row { margin-top: 12px; text-align: right; }
+    .sync-btn { font-family: 'JetBrains Mono','Menlo','Consolas',monospace; font-size: 0.65rem; color: var(--muted); cursor: pointer; background: none; border: 1px solid var(--border); border-radius: 6px; padding: 8px 14px; letter-spacing: 1px; transition: all 0.15s; }
+    .sync-btn:active { border-color: var(--accent); color: var(--accent); }
+
+    /* Rainbow badge */
+    .rainbow-badge { padding: 14px; border-radius: 10px; background: linear-gradient(90deg,#f00,#ff8000,#ff0,#0f0,#00f,#8b00ff); text-align: center; font-weight: 700; font-size: 0.78rem; letter-spacing: 2px; color: #fff; text-shadow: 1px 1px 4px #000; margin-top: 14px; }
+
+    /* Speed / field rows */
+    .speed-row { display: flex; align-items: center; gap: 10px; margin-top: 8px; }
+    .speed-icon { font-size: 1rem; }
+    .field-row { margin-bottom: 16px; }
+    .field-lbl { font-family: 'JetBrains Mono','Menlo','Consolas',monospace; font-size: 0.65rem; color: var(--muted); letter-spacing: 1.5px; text-transform: uppercase; margin-bottom: 8px; display: flex; justify-content: space-between; }
+    .field-lbl span { color: var(--accent); }
+
+    /* Showroom */
+    .btn-showroom { width: 100%; padding: 18px; border-radius: 14px; border: none; background: var(--accent); color: #fff; font-family: 'Rajdhani','Arial Narrow',system-ui,sans-serif; font-weight: 700; font-size: 1rem; letter-spacing: 3px; cursor: pointer; transition: all 0.2s; margin-bottom: 14px; position: relative; overflow: hidden; }
+    .btn-showroom:active { transform: scale(0.98); }
+    .btn-showroom.active { background: var(--red); box-shadow: 0 0 20px rgba(255,58,58,0.35); }
+    .btn-showroom::after { content: ''; position: absolute; inset: 0; background: linear-gradient(180deg, rgba(255,255,255,0.07) 0%, transparent 60%); }
+
+    /* Tuner */
+    .tuner-toggle { display: flex; justify-content: space-between; align-items: center; cursor: pointer; user-select: none; padding: 2px 0; }
+    .tuner-title { font-weight: 700; font-size: 0.85rem; letter-spacing: 2px; color: var(--accent2); }
+    .tuner-arrow { font-size: 0.8rem; color: var(--muted); transition: transform 0.25s; }
+    .tuner-arrow.open { transform: rotate(180deg); }
+    .tuner-body { display: none; padding-top: 18px; }
+    .tuner-body.open { display: block; }
+    input[type='number'] { width: 100%; height: 52px; border: 1px solid var(--border2); border-radius: 10px; background: var(--surface); color: #fff; font-family: 'JetBrains Mono','Menlo','Consolas',monospace; font-size: 1rem; text-align: center; outline: none; }
+    .toggle-row { display: flex; justify-content: space-between; align-items: center; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 14px 16px; margin-bottom: 14px; }
+    .toggle-lbl { font-weight: 600; font-size: 0.82rem; letter-spacing: 1px; }
+    .pill-btn { padding: 10px 18px; border-radius: 8px; border: 1px solid var(--border2); background: var(--dim); color: var(--text); font-family: 'Rajdhani','Arial Narrow',system-ui,sans-serif; font-weight: 700; font-size: 0.75rem; letter-spacing: 1px; cursor: pointer; transition: all 0.15s; }
+    .pill-btn.inverted { background: rgba(255,58,58,0.15); border-color: var(--red); color: var(--red); }
+    .btn-action { width: 100%; padding: 15px; border-radius: 12px; font-family: 'Rajdhani','Arial Narrow',system-ui,sans-serif; font-weight: 700; font-size: 0.88rem; letter-spacing: 2px; cursor: pointer; margin-bottom: 10px; transition: all 0.15s; }
+    .btn-action:disabled { opacity: 0.5; cursor: not-allowed; }
+    .btn-amber { border: 1px solid var(--amber); background: rgba(255,191,0,0.08); color: var(--amber); }
+    .btn-blue  { border: 1px solid var(--blue);  background: rgba(58,143,255,0.08);  color: var(--blue);  }
+    .btn-reset { width: 100%; padding: 14px; border-radius: 12px; border: 1px solid #2a1515; background: #0e0808; color: #ff5555; font-family: 'Rajdhani','Arial Narrow',system-ui,sans-serif; font-weight: 700; font-size: 0.8rem; letter-spacing: 2px; cursor: pointer; margin-top: 8px; }
+    .debug-panel { display: none; font-family: 'JetBrains Mono','Menlo','Consolas',monospace; font-size: 0.65rem; color: var(--green); background: #000; border: 1px solid var(--green); border-radius: 10px; padding: 12px; margin-top: 14px; line-height: 1.8; }
+    .section-divider { height: 1px; background: var(--border); margin: 18px 0 14px; }
+
+    /* OTA progress */
+    .ota-bar-track { height: 6px; border-radius: 3px; background: var(--dim); margin-top: 8px; }
+    .ota-bar-fill  { height: 100%; border-radius: 3px; background: var(--blue); width: 0; transition: width 0.3s; }
+
+    /* Toast */
+    .toast { position: fixed; bottom: max(72px, calc(env(safe-area-inset-bottom) + 32px)); left: 50%; transform: translateX(-50%) translateY(8px); background: var(--dim); border: 1px solid var(--border2); color: var(--green); font-family: 'JetBrains Mono','Menlo','Consolas',monospace; font-size: 0.68rem; letter-spacing: 2px; padding: 10px 22px; border-radius: 20px; opacity: 0; transition: opacity 0.18s, transform 0.18s; pointer-events: none; z-index: 2000; white-space: nowrap; }
+    .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+    .toast.err  { color: var(--red); border-color: #3a1515; }
+
+    /* Scan lines */
+    body::before { content: ''; position: fixed; inset: 0; background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.03) 2px, rgba(0,0,0,0.03) 4px); pointer-events: none; z-index: 999; }
+  </style>
+</head>
+<body>
+<div class="app">
+
+  <div class="header">
+    <div class="logo">
+      <div class="logo-name">AURA<span>CORE</span></div>
+      <div class="logo-sub">LOGIC CONTROLLER · V2.0</div>
+    </div>
+    <div class="conn-badge" onclick="dCheck()"><div class="conn-dot"></div>ONLINE</div>
+  </div>
+  <div class="divider"></div>
+
+  <!-- BRIGHTNESS -->
+  <div class="card">
+    <div class="card-header"><div class="card-title">BRIGHTNESS</div></div>
+    <div class="bright-row">
+      <input type="range" id="brightSlider" min="0" max="100" value="78"
+             oninput="uB(this.value)" onchange="req('/bright?val='+Math.round(this.value*2.55))">
+      <div class="bright-val" id="bVal">78<span class="bright-unit">%</span></div>
+    </div>
+  </div>
+
+  <!-- BRAKE -->
+  <div class="card" id="brakeCard">
+    <div class="card-header"><div class="card-title">BRAKE LIGHT</div><div class="card-tag">REAR</div></div>
+    <div class="tabs">
+      <div class="tab active-tab" onclick="sB(0)" id="b0">SOLID</div>
+      <div class="tab"            onclick="sB(1)" id="b1">F1</div>
+      <div class="tab"            onclick="sB(2)" id="b2">2-TAP</div>
+      <div class="tab"            onclick="sB(3)" id="b3">PULSE</div>
+      <div class="tab"            onclick="sB(4)" id="b4">FADE</div>
+    </div>
+    <div class="zone-row">
+      <div class="zone-picker"><div class="zone-lbl">LEFT SIDE</div><input type="color" id="bColorL" value="#FF0000" onchange="sendColor('/bcolor_l',this.value)"></div>
+      <div class="zone-picker"><div class="zone-lbl">RIGHT SIDE</div><input type="color" id="bColorR" value="#FF0000" onchange="sendColor('/bcolor_r',this.value)"></div>
+    </div>
+    <div class="sync-row"><button class="sync-btn" onclick="syncBrakeColors()">↔ SYNC L/R</button></div>
+  </div>
+
+  <!-- REVERSE -->
+  <div class="card">
+    <div class="card-header"><div class="card-title">REVERSE</div><div class="card-tag">AUTO-WHITE</div></div>
+    <div class="tabs">
+      <div class="tab active-tab" onclick="sR(0)" id="r0">SOLID</div>
+      <div class="tab"            onclick="sR(1)" id="r1">FADE IN</div>
+    </div>
+    <div style="margin-top:14px;height:8px;border-radius:4px;background:#fff;box-shadow:0 0 16px rgba(255,255,255,0.5);opacity:0.3;"></div>
+  </div>
+
+  <!-- DRL -->
+  <div class="card">
+    <div class="card-header"><div class="card-title">DRL</div><div class="card-tag">DAYTIME</div></div>
+    <div class="tabs">
+      <div class="tab active-tab" onclick="sM('d','solid')"   id="tDS">SOLID</div>
+      <div class="tab"            onclick="sM('d','rainbow')" id="tDR">RAINBOW</div>
+      <div class="tab"            onclick="sM('d','breathe')" id="tDB">BREATHE</div>
+      <div class="tab"            onclick="sM('d','chase')"   id="tDC">CHASE</div>
+    </div>
+    <div id="dSC">
+      <div class="zone-row">
+        <div class="zone-picker"><div class="zone-lbl">LEFT SIDE</div><input type="color" id="dColorL" value="#E10000" onchange="sendColor('/drl_l',this.value)"></div>
+        <div class="zone-picker"><div class="zone-lbl">RIGHT SIDE</div><input type="color" id="dColorR" value="#E10000" onchange="sendColor('/drl_r',this.value)"></div>
+      </div>
+      <div class="sync-row"><button class="sync-btn" onclick="syncDRLColors()">↔ SYNC L/R</button></div>
+    </div>
+    <div id="dRC" style="display:none;"><div class="rainbow-badge">RAINBOW ACTIVE</div></div>
+  </div>
+
+  <!-- TURN SIGNAL -->
+  <div class="card" id="turnCard">
+    <div class="card-header"><div class="card-title">TURN SIGNAL</div><div class="card-tag">SEQUENTIAL</div></div>
+    <div class="tabs">
+      <div class="tab active-tab" onclick="sM('t','solid')"   id="tTS">SOLID</div>
+      <div class="tab"            onclick="sM('t','rainbow')" id="tTR">SPECTRAL</div>
+      <div class="tab"            onclick="sM('t','chase')"   id="tTC">CHASE</div>
+    </div>
+    <div id="tSC">
+      <div class="zone-row">
+        <div class="zone-picker"><div class="zone-lbl">LEFT TURN</div><input type="color" id="tColorL" value="#FFA500" onchange="sendColor('/tcolor_l',this.value)"></div>
+        <div class="zone-picker"><div class="zone-lbl">RIGHT TURN</div><input type="color" id="tColorR" value="#FFA500" onchange="sendColor('/tcolor_r',this.value)"></div>
+      </div>
+    </div>
+    <div id="tRC" style="display:none;"><div class="rainbow-badge">SPECTRAL WIPE ACTIVE</div></div>
+    <div style="margin-top:16px;">
+      <div class="field-lbl">WIPE SPEED <span id="wipeVal">35ms</span></div>
+      <div class="speed-row">
+        <span class="speed-icon">🐇</span>
+        <input type="range" id="wipeSlider" min="10" max="80" value="35"
+               oninput="uWipe(this.value)" onchange="req('/wipe?val='+this.value)">
+        <span class="speed-icon">🐢</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- SHOWROOM -->
+  <button class="btn-showroom" id="srBtn" onclick="tS()">&#9654; ACTIVATE SHOWROOM</button>
+
+  <!-- TUNER -->
+  <div class="card">
+    <div class="tuner-toggle" onclick="toggleTuner()">
+      <div class="tuner-title">&#9881; TUNER TOOLS</div>
+      <div class="tuner-arrow" id="tunerArrow">&#9660;</div>
+    </div>
+    <div class="tuner-body" id="tunerBody">
+
+      <div class="field-row">
+        <div class="field-lbl">LED COUNT — PER SIDE <span id="ledCountVal">20</span></div>
+        <input type="number" id="ledInput" value="20" min="1" max="150"
+               inputmode="numeric" pattern="[0-9]*" autocomplete="off"
+               oninput="document.getElementById('ledCountVal').innerText=this.value"
+               onchange="req('/setleds?val='+this.value)">
+      </div>
+
+      <div class="toggle-row">
+        <div class="toggle-lbl">SWAP LEFT / RIGHT</div>
+        <button class="pill-btn" id="invBtn" onclick="toggleInvert()">NORMAL</button>
+      </div>
+
+      <div class="field-row">
+        <div class="field-lbl">TIMING FINE-TUNE <span id="fineVal">0ms</span></div>
+        <div class="speed-row">
+          <span style="font-family:'JetBrains Mono',monospace;font-size:0.65rem;color:var(--muted);">-15</span>
+          <input type="range" id="fineSlider" min="-15" max="15" value="0"
+                 oninput="uF(this.value)" onchange="req('/fine?val='+this.value)">
+          <span style="font-family:'JetBrains Mono',monospace;font-size:0.65rem;color:var(--muted);">+15</span>
+        </div>
+      </div>
+
+      <button class="btn-action btn-amber" id="learnBtn" onclick="startLearn()">&#8634; RE-LEARN BLINK TIMING</button>
+
+      <div class="debug-panel" id="db">
+        WIPE_SPD:  <span style="float:right;color:#fff" id="dbSpd">35ms</span><br>
+        OFFSET:    <span style="float:right;color:#fff" id="dbOffset">0ms</span><br>
+        FREE_HEAP: <span style="float:right;color:#fff" id="dbHeap">--</span>
+      </div>
+
+      <!-- OTA -->
+      <div class="section-divider"></div>
+      <div class="field-lbl" style="margin-bottom:10px;">FIRMWARE UPDATE</div>
+      <input type="file" id="otaBin" accept=".bin" style="display:none;" onchange="startOTA(this)">
+      <button type="button" class="btn-action btn-blue" onclick="document.getElementById('otaBin').click()">
+        &#8679; SELECT FIRMWARE .BIN
+      </button>
+      <div id="otaWrap" style="display:none;margin-top:12px;">
+        <div class="field-lbl">FLASHING <span id="otaPct">0%</span></div>
+        <div class="ota-bar-track"><div class="ota-bar-fill" id="otaBar"></div></div>
+      </div>
+
+      <button class="btn-reset" onclick="if(confirm('Factory reset? All settings will be erased.')) req('/reset')">
+        &#9888; FACTORY RESET DEVICE
+      </button>
+    </div>
+  </div>
+
+</div>
+<div class="toast" id="toast">SAVED</div>
+
+<script>
+  var ON_DEVICE = /^\d{1,3}(\.\d{1,3}){3}$/.test(window.location.hostname);
+
+  // ── HTTP helper ──────────────────────────────────────────────────────────────
+  function req(url) {
+    if (!ON_DEVICE) { if (!url.includes('/invert') && !url.includes('/reset') && !url.includes('/setleds')) toast('SAVED', false); return; }
+    var x = new XMLHttpRequest();
+    x.open('GET', url, true);
+    x.onload  = function() { if (url.includes('/invert')||url.includes('/reset')||url.includes('/setleds')) location.reload(); else toast('SAVED', false); };
+    x.onerror = function() { toast('ERROR', true); };
+    x.send();
+  }
+
+  // ── Toast ────────────────────────────────────────────────────────────────────
+  var _tt;
+  function toast(msg, err) {
+    var t = document.getElementById('toast');
+    t.innerText = msg;
+    t.className = 'toast' + (err ? ' err' : '');
+    t.classList.add('show');
+    clearTimeout(_tt);
+    _tt = setTimeout(function() { t.classList.remove('show'); }, 1400);
+  }
+
+  // ── Config init (fetches current settings from device on page load) ──────────
+  function initConfig() {
+    if (!ON_DEVICE) return;
+    fetch('/config').then(function(r) { return r.json(); }).then(function(c) {
+      document.getElementById('brightSlider').value = c.brightness;
+      uB(c.brightness);
+      sB(c.brakeMode);
+      document.getElementById('bColorL').value = '#' + c.brakeColorL;
+      document.getElementById('bColorR').value = '#' + c.brakeColorR;
+      sR(c.reverseMode);
+      var drlNames  = ['solid','rainbow','breathe','chase'];
+      var turnNames = ['solid','rainbow','chase'];
+      sM('d', drlNames[c.drlMode]  || 'solid');
+      sM('t', turnNames[c.turnMode] || 'solid');
+      document.getElementById('dColorL').value = '#' + c.drlColorL;
+      document.getElementById('dColorR').value = '#' + c.drlColorR;
+      document.getElementById('tColorL').value = '#' + c.turnColorL;
+      document.getElementById('tColorR').value = '#' + c.turnColorR;
+      document.getElementById('wipeSlider').value = c.wipeSpeed;
+      uWipe(c.wipeSpeed);
+      document.getElementById('ledInput').value = c.numLeds;
+      document.getElementById('ledCountVal').innerText = c.numLeds;
+      document.getElementById('fineSlider').value = c.fineTune;
+      uF(c.fineTune);
+      _inv = c.invert;
+      if (c.invert) { var b = document.getElementById('invBtn'); b.innerText = 'INVERTED'; b.className = 'pill-btn inverted'; }
+    }).catch(function() {});
+  }
+  window.addEventListener('load', initConfig);
+
+  // ── Brightness ───────────────────────────────────────────────────────────────
+  function uB(v) { document.getElementById('bVal').innerHTML = v + '<span class="bright-unit">%</span>'; }
+
+  // ── Fine-tune / wipe ─────────────────────────────────────────────────────────
+  function uF(v) { var s = (v>0?'+':'')+v+'ms'; document.getElementById('fineVal').innerText=s; document.getElementById('dbOffset').innerText=s; }
+  function uWipe(v) { document.getElementById('wipeVal').innerText=v+'ms'; document.getElementById('dbSpd').innerText=v+'ms'; }
+
+  // ── Brake mode ───────────────────────────────────────────────────────────────
+  function sB(mode) {
+    ['b0','b1','b2','b3','b4'].forEach(function(id,i) { document.getElementById(id).className='tab'+(i===mode?' active-tab':''); });
+    req('/bmode?val='+mode);
+  }
+
+  // ── Reverse mode ─────────────────────────────────────────────────────────────
+  function sR(mode) {
+    ['r0','r1'].forEach(function(id,i) { document.getElementById(id).className='tab'+(i===mode?' active-tab':''); });
+    req('/rmode?val='+mode);
+  }
+
+  // ── DRL / Turn mode ──────────────────────────────────────────────────────────
+  function sM(type, mode) {
+    if (type === 'd') {
+      ['tDS','tDR','tDB','tDC'].forEach(function(id) { document.getElementById(id).className='tab'; });
+      var dm = {solid:'tDS',rainbow:'tDR',breathe:'tDB',chase:'tDC'};
+      document.getElementById(dm[mode]).className='tab active-tab';
+      document.getElementById('dSC').style.display = mode==='solid'?'block':'none';
+      document.getElementById('dRC').style.display  = mode!=='solid'?'block':'none';
+      req('/mode_d?val='+mode);
+    } else {
+      ['tTS','tTR','tTC'].forEach(function(id) { document.getElementById(id).className='tab'; });
+      var tm = {solid:'tTS',rainbow:'tTR',chase:'tTC'};
+      document.getElementById(tm[mode]).className='tab active-tab';
+      document.getElementById('tSC').style.display = mode==='solid'?'block':'none';
+      document.getElementById('tRC').style.display  = mode!=='solid'?'block':'none';
+      req('/mode_t?val='+mode);
+    }
+  }
+
+  // ── Color helpers ────────────────────────────────────────────────────────────
+  function sendColor(ep, hex) { req(ep+'?val='+hex.replace('#','')); }
+  function syncBrakeColors() { var v=document.getElementById('bColorL').value; document.getElementById('bColorR').value=v; req('/bcolor_l?val='+v.replace('#','')); req('/bcolor_r?val='+v.replace('#','')); }
+  function syncDRLColors()   { var v=document.getElementById('dColorL').value; document.getElementById('dColorR').value=v; req('/drl_l?val='+v.replace('#','')); req('/drl_r?val='+v.replace('#','')); }
+
+  // ── Tuner ────────────────────────────────────────────────────────────────────
+  function toggleTuner() { var o=document.getElementById('tunerBody').classList.toggle('open'); document.getElementById('tunerArrow').classList.toggle('open',o); }
+  var _inv = false;
+  function toggleInvert() { _inv=!_inv; var b=document.getElementById('invBtn'); b.innerText=_inv?'INVERTED':'NORMAL'; b.className='pill-btn'+(_inv?' inverted':''); req('/invert'); }
+  function tS() { var b=document.getElementById('srBtn'); var a=b.classList.toggle('active'); b.innerHTML=a?'&#9632; DEACTIVATE SHOWROOM':'&#9654; ACTIVATE SHOWROOM'; req('/showroom?state='+(a?'on':'off')); }
+
+  // ── Re-learn blink timing ────────────────────────────────────────────────────
+  function startLearn() { var b=document.getElementById('learnBtn'); b.innerText='&#9203; WAITING FOR BLINKER...'; b.disabled=true; req('/sync'); setTimeout(function(){b.innerHTML='&#8634; RE-LEARN BLINK TIMING';b.disabled=false;},6000); }
+
+  // ── OTA firmware update ──────────────────────────────────────────────────────
+  function startOTA(input) {
+    var file = input.files[0];
+    if (!file) return;
+    if (!ON_DEVICE) { toast('PREVIEW MODE', false); input.value=''; return; }
+    if (!confirm('Flash "' + file.name + '"?\nDevice will reboot when done.')) { input.value=''; return; }
+    var form = new FormData();
+    form.append('firmware', file);
+    var xhr = new XMLHttpRequest();
+    xhr.open('POST', '/update', true);
+    document.getElementById('otaWrap').style.display = 'block';
+    xhr.upload.onprogress = function(e) {
+      if (e.lengthComputable) {
+        var p = Math.round(e.loaded / e.total * 100);
+        document.getElementById('otaPct').innerText = p + '%';
+        document.getElementById('otaBar').style.width = p + '%';
+      }
+    };
+    xhr.onload  = function() { toast(xhr.status===200 ? 'DONE — REBOOTING' : 'FLASH FAILED', xhr.status!==200); input.value=''; };
+    xhr.onerror = function() { toast('FLASH FAILED', true); input.value=''; };
+    xhr.send(form);
+  }
+
+  // ── Debug unlock (triple-tap ONLINE badge) ───────────────────────────────────
+  var _dTap = 0;
+  function dCheck() { _dTap++; if(_dTap>=3) document.getElementById('db').style.display='block'; setTimeout(function(){_dTap=0;},1000); }
+
+  // ── Status polling (heap for debug panel) ────────────────────────────────────
+  function pollStatus() { var x=new XMLHttpRequest(); x.open('GET','/status',true); x.onload=function(){try{document.getElementById('dbHeap').innerText=JSON.parse(x.responseText).heap+'B';}catch(e){}}; x.send(); }
+  if (ON_DEVICE) setInterval(pollStatus, 2000);
+</script>
+</body>
+</html>

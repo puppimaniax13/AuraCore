@@ -1,8 +1,10 @@
-#include <WiFi.h>
+﻿#include <WiFi.h>
 #include <ESPAsyncWebServer.h>
+#include <LittleFS.h>
 #include <FastLED.h>
 #include <Preferences.h>
 #include <ArduinoJson.h>   // Add "ArduinoJson" by Benoit Blanchon in Library Manager
+#include <Update.h>
 
 #define MAX_LEDS         150
 #define GPIO_DRL_IN      4
@@ -37,7 +39,7 @@ struct Config {
   // Brake mode: 0=solid, 1=F1 strobe, 2=2-tap, 3=pulse, 4=fade-in
   uint8_t  brakeMode;
   // Reverse mode: 0=solid white, 1=fade-in white
-  // Color is always white — upgrade to SK6812 RGBW for best white quality
+  // Color is always white â€” upgrade to SK6812 RGBW for best white quality
   uint8_t  reverseMode;
   uint16_t wipeSpeed;
   int8_t   fineTune;
@@ -64,7 +66,7 @@ bool isSyncing      = false;
 
 AsyncWebServer server(80);
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
+// â”€â”€â”€ Helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 String colorToHex(CRGB c) {
   char hex[7];
@@ -77,243 +79,13 @@ CRGB hexToColor(const String& hex) {
   return CRGB((val >> 16) & 0xFF, (val >> 8) & 0xFF, val & 0xFF);
 }
 
-// ─── HTML (served over WiFi) ──────────────────────────────────────────────────
-// NOTE: The full HTML is large. On ESP32-S3 this fits comfortably in flash.
-// If flash is tight, move to PROGMEM or LittleFS.
-
-String getHTML() {
-  String h = "";
-
-  // ── Head ──
-  h += F("<!DOCTYPE html><html lang='en'><head>");
-  h += F("<meta name='viewport' content='width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no'>");
-  h += F("<title>AuraCore v2.0</title>");
-  // Google Fonts omitted — no internet on the car's SoftAP network.
-
-  // ── CSS ──
-  h += F("<style>");
-  h += F(":root{--bg:#080a0c;--surface:#0f1215;--card:#13171c;--border:#1e252e;--border2:#2a3340;--accent:#ff6a00;--accent2:#ffaa44;--blue:#3a8fff;--green:#2dff8e;--red:#ff3a3a;--amber:#ffbf00;--text:#cdd6e0;--muted:#4a5a6a;--dim:#232d38;}");
-  h += F("*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}");
-  h += F("body{background:var(--bg);color:var(--text);font-family:'Rajdhani','Arial Narrow',system-ui,sans-serif;min-height:100vh;display:flex;justify-content:center;padding:0 0 max(40px,env(safe-area-inset-bottom)) 0;}");
-  h += F(".app{width:100%;max-width:420px;padding:0 14px;}");
-
-  // Header
-  h += F(".header{padding:28px 0 18px;display:flex;align-items:center;justify-content:space-between;}");
-  h += F(".logo-name{font-weight:700;font-size:1.6rem;letter-spacing:5px;color:#fff;line-height:1;}");
-  h += F(".logo-name span{color:var(--accent);}");
-  h += F(".logo-sub{font-family:'JetBrains Mono','Menlo','Consolas',monospace;font-size:0.6rem;color:var(--muted);letter-spacing:3px;margin-top:3px;}");
-  h += F(".conn-badge{display:flex;align-items:center;gap:6px;background:var(--card);border:1px solid var(--border);border-radius:20px;padding:8px 14px;font-family:'JetBrains Mono','Menlo','Consolas',monospace;font-size:0.65rem;color:var(--green);cursor:pointer;}");
-  h += F(".conn-dot{width:7px;height:7px;border-radius:50%;background:var(--green);box-shadow:0 0 8px var(--green);animation:pulse-dot 2s infinite;}");
-  h += F("@keyframes pulse-dot{0%,100%{opacity:1;}50%{opacity:0.4;}}");
-  h += F(".divider{height:1px;background:linear-gradient(90deg,transparent,var(--border2),transparent);margin:4px 0 18px;}");
-
-  // Card
-  h += F(".card{background:var(--card);border:1px solid var(--border);border-radius:18px;padding:18px;margin-bottom:14px;}");
-  h += F(".card-tag{font-family:'JetBrains Mono','Menlo','Consolas',monospace;font-size:0.65rem;color:var(--muted);letter-spacing:2px;text-transform:uppercase;background:var(--dim);border-radius:6px;padding:3px 8px;}");
-  h += F(".card-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;}");
-  h += F(".card-title{font-weight:700;font-size:0.85rem;letter-spacing:2px;text-transform:uppercase;}");
-
-  // Range inputs
-  h += F("input[type='range']{-webkit-appearance:none;appearance:none;width:100%;height:6px;border-radius:3px;background:var(--dim);outline:none;}");
-  h += F("input[type='range']::-webkit-slider-thumb{-webkit-appearance:none;width:26px;height:26px;border-radius:50%;background:var(--accent);border:3px solid var(--bg);box-shadow:0 0 10px rgba(255,106,0,0.5);cursor:pointer;}");
-
-  // Brightness
-  h += F(".bright-row{display:flex;align-items:center;gap:14px;}");
-  h += F(".bright-val{font-family:'JetBrains Mono',monospace;font-size:1.4rem;font-weight:700;color:#fff;min-width:54px;text-align:right;}");
-  h += F(".bright-unit{font-size:0.7rem;color:var(--muted);font-weight:400;}");
-
-  // Tabs
-  h += F(".tabs{display:flex;gap:6px;flex-wrap:wrap;}");
-  h += F(".tab{flex:1;min-width:0;padding:12px 4px;border-radius:10px;border:1px solid var(--border);background:var(--surface);color:var(--muted);font-family:'Rajdhani','Arial Narrow',system-ui,sans-serif;font-weight:700;font-size:0.78rem;letter-spacing:0.5px;text-align:center;cursor:pointer;transition:all 0.15s;user-select:none;}");
-  h += F(".tab:active{transform:scale(0.96);}.tab.active-tab{background:var(--dim);border-color:var(--accent);color:var(--accent);}");
-
-  // Zone pickers
-  h += F(".zone-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:14px;}");
-  h += F(".zone-picker{display:flex;flex-direction:column;gap:6px;}");
-  h += F(".zone-lbl{font-family:'JetBrains Mono','Menlo','Consolas',monospace;font-size:0.65rem;color:var(--muted);letter-spacing:1.5px;text-transform:uppercase;}");
-  h += F("input[type='color']{width:100%;height:52px;border:1px solid var(--border2);border-radius:10px;background:var(--surface);cursor:pointer;padding:4px;}");
-  h += F("input[type='number']{width:100%;height:52px;border:1px solid var(--border2);border-radius:10px;background:var(--surface);color:#fff;font-family:'JetBrains Mono','Menlo','Consolas',monospace;font-size:1rem;text-align:center;outline:none;}");
-
-  // Rainbow badge
-  h += F(".rainbow-badge{padding:14px;border-radius:10px;background:linear-gradient(90deg,#f00,#ff8000,#ff0,#0f0,#00f,#8b00ff);text-align:center;font-weight:700;font-size:0.75rem;letter-spacing:2px;color:#fff;text-shadow:1px 1px 4px #000;margin-top:14px;}");
-
-  // Speed row
-  h += F(".speed-row{display:flex;align-items:center;gap:10px;margin-top:8px;}");
-  h += F(".speed-icon{font-size:1rem;}");
-
-  // Showroom
-  h += F(".btn-showroom{width:100%;padding:18px;border-radius:14px;border:none;background:var(--accent);color:#fff;font-family:'Rajdhani',sans-serif;font-weight:700;font-size:1rem;letter-spacing:3px;cursor:pointer;transition:all 0.2s;margin-bottom:14px;position:relative;overflow:hidden;}");
-  h += F(".btn-showroom:active{transform:scale(0.98);}.btn-showroom.active{background:var(--red);box-shadow:0 0 20px rgba(255,58,58,0.35);}");
-
-  // Tuner
-  h += F(".tuner-toggle{display:flex;justify-content:space-between;align-items:center;cursor:pointer;user-select:none;padding:2px 0;}");
-  h += F(".tuner-title{font-weight:700;font-size:0.85rem;letter-spacing:2px;color:var(--accent2);}");
-  h += F(".tuner-arrow{font-size:0.8rem;color:var(--muted);transition:transform 0.25s;}.tuner-arrow.open{transform:rotate(180deg);}");
-  h += F(".tuner-body{display:none;padding-top:18px;}.tuner-body.open{display:block;}");
-  h += F(".field-row{margin-bottom:16px;}");
-  h += F(".field-lbl{font-family:'JetBrains Mono','Menlo','Consolas',monospace;font-size:0.65rem;color:var(--muted);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:8px;display:flex;justify-content:space-between;}");
-  h += F(".field-lbl span{color:var(--accent);}");
-  h += F(".toggle-row{display:flex;justify-content:space-between;align-items:center;background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:14px 16px;margin-bottom:14px;}");
-  h += F(".toggle-lbl{font-weight:600;font-size:0.8rem;letter-spacing:1px;}");
-  h += F(".pill-btn.inverted{background:rgba(255,58,58,0.15);border-color:var(--red);color:var(--red);}");
-  h += F(".sync-row{margin-top:12px;text-align:right;}");
-  h += F(".sync-btn{font-family:'JetBrains Mono','Menlo','Consolas',monospace;font-size:0.65rem;color:var(--muted);cursor:pointer;background:none;border:1px solid var(--border);border-radius:6px;padding:8px 14px;letter-spacing:1px;transition:all 0.15s;}");
-  h += F(".sync-btn:active{border-color:var(--accent);color:var(--accent);}");
-  h += F(".pill-btn{padding:10px 18px;border-radius:8px;border:1px solid var(--border2);background:var(--dim);color:var(--text);font-family:'Rajdhani','Arial Narrow',system-ui,sans-serif;font-weight:700;font-size:0.75rem;letter-spacing:1px;cursor:pointer;transition:all 0.15s;}");
-  h += F(".btn-learn{width:100%;padding:15px;border-radius:12px;border:1px solid var(--amber);background:rgba(255,191,0,0.08);color:var(--amber);font-family:'Rajdhani','Arial Narrow',system-ui,sans-serif;font-weight:700;font-size:0.88rem;letter-spacing:2px;cursor:pointer;margin-bottom:10px;transition:all 0.15s;}");
-  h += F(".btn-learn:disabled{opacity:0.5;cursor:not-allowed;}");
-  h += F(".btn-reset{width:100%;padding:14px;border-radius:12px;border:1px solid #2a1515;background:#0e0808;color:#ff5555;font-family:'Rajdhani','Arial Narrow',system-ui,sans-serif;font-weight:700;font-size:0.8rem;letter-spacing:2px;cursor:pointer;margin-top:8px;}");
-  h += F(".debug-panel{display:none;font-family:'JetBrains Mono','Menlo','Consolas',monospace;font-size:0.65rem;color:#2dff8e;background:#000;border:1px solid #2dff8e;border-radius:10px;padding:12px;margin-top:14px;line-height:1.8;}");
-  h += F(".toast{position:fixed;bottom:max(72px,calc(env(safe-area-inset-bottom) + 32px));left:50%;transform:translateX(-50%) translateY(8px);background:var(--dim);border:1px solid var(--border2);color:var(--green);font-family:'JetBrains Mono',monospace;font-size:0.68rem;letter-spacing:2px;padding:10px 22px;border-radius:20px;opacity:0;transition:opacity 0.18s,transform 0.18s;pointer-events:none;z-index:2000;white-space:nowrap;}");
-  h += F(".toast.show{opacity:1;transform:translateX(-50%) translateY(0);}");
-  h += F("body::before{content:'';position:fixed;inset:0;background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,0.03) 2px,rgba(0,0,0,0.03) 4px);pointer-events:none;z-index:999;}");
-  h += F("</style></head><body><div class='app'>");
-
-  // ── Header ──
-  h += F("<div class='header'><div class='logo'>");
-  h += F("<div class='logo-name'>AURA<span>CORE</span></div>");
-  h += F("<div class='logo-sub'>LOGIC CONTROLLER · V2.0</div></div>");
-  h += F("<div class='conn-badge' onclick='dCheck()'><div class='conn-dot'></div>ONLINE</div></div>");
-  h += F("<div class='divider'></div>");
-
-  // ── Brightness ──
-  int bPct = round((settings.brightness / 255.0) * 100);
-  h += F("<div class='card'><div class='card-header'><div class='card-title'>BRIGHTNESS</div></div><div class='bright-row'>");
-  h += "<input type='range' min='0' max='100' value='" + String(bPct) + "' oninput='uB(this.value)' onchange=\"req('/bright?val='+Math.round(this.value*2.55))\" style='flex:1;'>";
-  h += "<div class='bright-val' id='bVal'>" + String(bPct) + "<span class='bright-unit'>%</span></div>";
-  h += F("</div></div>");
-
-  // ── Brake ──
-  String bm[5] = {"active-tab","","","",""};
-  bm[settings.brakeMode] = "active-tab";
-  h += F("<div class='card'><div class='card-header'><div class='card-title'>BRAKE LIGHT</div><div class='card-tag'>REAR</div></div>");
-  h += F("<div class='tabs'>");
-  h += "<div class='tab " + bm[0] + "' onclick='sB(0)' id='b0'>SOLID</div>";
-  h += "<div class='tab " + bm[1] + "' onclick='sB(1)' id='b1'>F1</div>";
-  h += "<div class='tab " + bm[2] + "' onclick='sB(2)' id='b2'>2-TAP</div>";
-  h += "<div class='tab " + bm[3] + "' onclick='sB(3)' id='b3'>PULSE</div>";
-  h += "<div class='tab " + bm[4] + "' onclick='sB(4)' id='b4'>FADE</div>";
-  h += F("</div><div class='zone-row'>");
-  h += "<div class='zone-picker'><div class='zone-lbl'>LEFT SIDE</div><input type='color' id='bColorL' value='#" + colorToHex(settings.brakeColorL) + "' onchange=\"sendColor('/bcolor_l',this.value)\"></div>";
-  h += "<div class='zone-picker'><div class='zone-lbl'>RIGHT SIDE</div><input type='color' id='bColorR' value='#" + colorToHex(settings.brakeColorR) + "' onchange=\"sendColor('/bcolor_r',this.value)\"></div>";
-  h += F("</div><div class='sync-row'><button class='sync-btn' onclick='syncBrakeColors()'>&#8596; SYNC L/R</button></div></div>");
-
-  // ── Reverse ──
-  String rm[2] = {"",""};
-  rm[settings.reverseMode] = "active-tab";
-  h += F("<div class='card'><div class='card-header'><div class='card-title'>REVERSE</div><div class='card-tag'>AUTO-WHITE</div></div>");
-  h += F("<div class='tabs'>");
-  h += "<div class='tab " + rm[0] + "' onclick='sR(0)' id='r0'>SOLID</div>";
-  h += "<div class='tab " + rm[1] + "' onclick='sR(1)' id='r1'>FADE IN</div>";
-  h += F("</div>");
-  h += F("<div style='margin-top:14px;height:8px;border-radius:4px;background:#ffffff;box-shadow:0 0 16px rgba(255,255,255,0.5);opacity:0.3;'></div></div>");
-
-  // ── DRL ──
-  String dm[4] = {"","","",""};
-  dm[settings.drlMode] = "active-tab";
-  bool dSolid = (settings.drlMode == 0);
-  h += F("<div class='card'><div class='card-header'><div class='card-title'>DRL</div><div class='card-tag'>DAYTIME</div></div>");
-  h += F("<div class='tabs'>");
-  h += "<div class='tab " + dm[0] + "' onclick=\"sM('d','solid')\" id='tDS'>SOLID</div>";
-  h += "<div class='tab " + dm[1] + "' onclick=\"sM('d','rainbow')\" id='tDR'>RAINBOW</div>";
-  h += "<div class='tab " + dm[2] + "' onclick=\"sM('d','breathe')\" id='tDB'>BREATHE</div>";
-  h += "<div class='tab " + dm[3] + "' onclick=\"sM('d','chase')\" id='tDC'>CHASE</div>";
-  h += F("</div>");
-  h += "<div id='dSC' style='display:" + String(dSolid ? "block" : "none") + ";'>";
-  h += F("<div class='zone-row'>");
-  h += "<div class='zone-picker'><div class='zone-lbl'>LEFT SIDE</div><input type='color' id='dColorL' value='#" + colorToHex(settings.drlColorL) + "' onchange=\"sendColor('/drl_l',this.value)\"></div>";
-  h += "<div class='zone-picker'><div class='zone-lbl'>RIGHT SIDE</div><input type='color' id='dColorR' value='#" + colorToHex(settings.drlColorR) + "' onchange=\"sendColor('/drl_r',this.value)\"></div>";
-  h += F("</div><div class='sync-row'><button class='sync-btn' onclick='syncDRLColors()'>&#8596; SYNC L/R</button></div></div>");
-  h += "<div id='dRC' style='display:" + String(!dSolid ? "block" : "none") + ";'><div class='rainbow-badge'>MODE ACTIVE</div></div></div>";
-
-  // ── Turn ──
-  String tm[3] = {"","",""};
-  tm[settings.turnMode] = "active-tab";
-  bool tSolid = (settings.turnMode == 0);
-  h += F("<div class='card'><div class='card-header'><div class='card-title'>TURN SIGNAL</div><div class='card-tag'>SEQUENTIAL</div></div>");
-  h += F("<div class='tabs'>");
-  h += "<div class='tab " + tm[0] + "' onclick=\"sM('t','solid')\" id='tTS'>SOLID</div>";
-  h += "<div class='tab " + tm[1] + "' onclick=\"sM('t','rainbow')\" id='tTR'>SPECTRAL</div>";
-  h += "<div class='tab " + tm[2] + "' onclick=\"sM('t','chase')\" id='tTC'>CHASE</div>";
-  h += F("</div>");
-  h += "<div id='tSC' style='display:" + String(tSolid ? "block" : "none") + ";'>";
-  h += F("<div class='zone-row'>");
-  h += "<div class='zone-picker'><div class='zone-lbl'>LEFT TURN</div><input type='color' value='#" + colorToHex(settings.turnColorL) + "' onchange=\"sendColor('/tcolor_l',this.value)\"></div>";
-  h += "<div class='zone-picker'><div class='zone-lbl'>RIGHT TURN</div><input type='color' value='#" + colorToHex(settings.turnColorR) + "' onchange=\"sendColor('/tcolor_r',this.value)\"></div>";
-  h += F("</div></div>");
-  h += "<div id='tRC' style='display:" + String(!tSolid ? "block" : "none") + ";'><div class='rainbow-badge'>SPECTRAL WIPE ACTIVE</div></div>";
-  // Wipe speed
-  h += F("<div style='margin-top:16px;'><div class='field-lbl'>WIPE SPEED <span id='wipeVal'>");
-  h += String(settings.wipeSpeed); h += F("ms</span></div>");
-  h += F("<div class='speed-row'><span class='speed-icon'>🐇</span>");
-  h += "<input type='range' min='10' max='80' value='" + String(settings.wipeSpeed) + "' oninput=\"document.getElementById('wipeVal').innerText=this.value+'ms'\" onchange=\"req('/wipe?val='+this.value)\" style='flex:1;'>";
-  h += F("<span class='speed-icon'>🐢</span></div></div></div>");
-
-  // ── Showroom ──
-  h += F("<button class='btn-showroom' id='srBtn' onclick='tS()'>&#9654; ACTIVATE SHOWROOM</button>");
-
-  // ── Tuner ──
-  h += F("<div class='card'><div class='tuner-toggle' onclick='toggleTuner()'>");
-  h += F("<div class='tuner-title'>&#9881; TUNER TOOLS</div><div class='tuner-arrow' id='tunerArrow'>&#9660;</div></div>");
-  h += F("<div class='tuner-body' id='tunerBody'>");
-  h += F("<div class='field-row'><div class='field-lbl'>LED COUNT — PER SIDE <span id='ledCountVal'>");
-  h += String(settings.numLeds); h += F("</span></div>");
-  h += "<input type='number' value='" + String(settings.numLeds) + "' min='1' max='150' inputmode='numeric' pattern='[0-9]*' autocomplete='off' oninput=\"document.getElementById('ledCountVal').innerText=this.value\" onchange=\"req('/setleds?val='+this.value)\"></div>";
-  h += "<div class='toggle-row'><div class='toggle-lbl'>SWAP LEFT / RIGHT</div>";
-  h += "<button class='pill-btn" + String(settings.invert ? " inverted" : "") + "' id='invBtn' onclick='toggleInvert()'>" + String(settings.invert ? "INVERTED" : "NORMAL") + "</button></div>";
-  h += F("<div class='field-row'><div class='field-lbl'>TIMING FINE-TUNE <span id='fineVal'>");
-  h += String(settings.fineTune); h += F("ms</span></div>");
-  h += F("<div class='speed-row'><span style='font-family:JetBrains Mono,monospace;font-size:0.6rem;color:#4a5a6a;'>-15</span>");
-  h += "<input type='range' min='-15' max='15' value='" + String(settings.fineTune) + "' oninput='uF(this.value)' onchange=\"req('/fine?val='+this.value)\" style='flex:1;'>";
-  h += F("<span style='font-family:JetBrains Mono,monospace;font-size:0.65rem;color:#4a5a6a;'>+15</span></div></div>");
-  h += F("<button class='btn-learn' id='learnBtn' onclick='startLearn()'>&#8634; RE-LEARN BLINK TIMING</button>");
-  h += F("<div class='debug-panel' id='db'>WIPE_SPD: <span style='float:right;color:#fff' id='dbSpd'>35ms</span><br>OFFSET: <span style='float:right;color:#fff' id='dbOffset'>0ms</span><br>FREE_HEAP: <span style='float:right;color:#fff' id='dbHeap'>--</span></div>");
-  h += F("<button class='btn-reset' onclick=\"if(confirm('Factory reset? All settings will be erased.'))req('/reset')\">&#9888; FACTORY RESET DEVICE</button>");
-  h += F("</div></div></div>");
-  h += F("<div class='toast' id='toast'>SAVED</div>");
-
-  // ── Scripts ──
-  h += F("<script>");
-  // HTTP helper
-  h += F("function req(u){var x=new XMLHttpRequest();x.open('GET',u,true);");
-  h += F("x.onload=function(){if(u.includes('/invert')||u.includes('/reset')||u.includes('/setleds'))location.reload();else toast('SAVED');};x.send();}");
-  // Toast
-  h += F("var _tt;function toast(m){var t=document.getElementById('toast');t.innerText=m;t.classList.add('show');clearTimeout(_tt);_tt=setTimeout(function(){t.classList.remove('show');},1400);}");
-  // UI helpers
-  h += F("function uB(v){document.getElementById('bVal').innerHTML=v+'<span class=\"bright-unit\">%</span>';}");
-  h += F("function uF(v){var s=(v>0?'+':'')+v+'ms';document.getElementById('fineVal').innerText=s;document.getElementById('dbOffset').innerText=s;}");
-  h += F("function sB(m){['b0','b1','b2','b3','b4'].forEach(function(id,i){document.getElementById(id).className='tab'+(i===m?' active-tab':'');});req('/bmode?val='+m);}");
-  h += F("function sR(m){['r0','r1'].forEach(function(id,i){document.getElementById(id).className='tab'+(i===m?' active-tab':'');});req('/rmode?val='+m);}");
-  h += F("function sM(t,m){");
-  h += F("if(t==='d'){['tDS','tDR','tDB','tDC'].forEach(function(id){document.getElementById(id).className='tab';});");
-  h += F("var dm={solid:'tDS',rainbow:'tDR',breathe:'tDB',chase:'tDC'};document.getElementById(dm[m]).className='tab active-tab';");
-  h += F("document.getElementById('dSC').style.display=(m==='solid'?'block':'none');document.getElementById('dRC').style.display=(m!=='solid'?'block':'none');req('/mode_d?val='+m);}");
-  h += F("else{['tTS','tTR','tTC'].forEach(function(id){document.getElementById(id).className='tab';});");
-  h += F("var tm2={solid:'tTS',rainbow:'tTR',chase:'tTC'};document.getElementById(tm2[m]).className='tab active-tab';");
-  h += F("document.getElementById('tSC').style.display=(m==='solid'?'block':'none');document.getElementById('tRC').style.display=(m!=='solid'?'block':'none');req('/mode_t?val='+m);}");
-  h += F("}");
-  h += F("function sendColor(ep,hex){req(ep+'?val='+hex.replace('#',''));}");
-  h += F("function syncBrakeColors(){var v=document.getElementById('bColorL').value;document.getElementById('bColorR').value=v;req('/bcolor_l?val='+v.replace('#',''));req('/bcolor_r?val='+v.replace('#',''));}");
-  h += F("function syncDRLColors(){var v=document.getElementById('dColorL').value;document.getElementById('dColorR').value=v;req('/drl_l?val='+v.replace('#',''));req('/drl_r?val='+v.replace('#',''));}");
-  h += F("function toggleTuner(){var b=document.getElementById('tunerBody');var a=document.getElementById('tunerArrow');var o=b.classList.toggle('open');a.classList.toggle('open',o);}");
-  h += F("var inv="); h += String(settings.invert ? "true" : "false"); h += F(";");
-  h += F("function toggleInvert(){inv=!inv;var btn=document.getElementById('invBtn');btn.innerText=inv?'INVERTED':'NORMAL';btn.className='pill-btn'+(inv?' inverted':'');req('/invert');}");
-  h += F("function tS(){var b=document.getElementById('srBtn');var a=b.classList.toggle('active');b.innerHTML=a?'&#9632; DEACTIVATE SHOWROOM':'&#9654; ACTIVATE SHOWROOM';req('/showroom?state='+(a?'on':'off'));}");
-  h += F("function startLearn(){var b=document.getElementById('learnBtn');b.innerText='&#9203; WAITING FOR BLINKER...';b.disabled=true;req('/sync');setTimeout(function(){b.innerHTML='&#8634; RE-LEARN BLINK TIMING';b.disabled=false;},6000);}");
-  h += F("var _dTap=0;function dCheck(){_dTap++;if(_dTap>=3)document.getElementById('db').style.display='block';setTimeout(function(){_dTap=0;},1000);}");
-  // Status polling
-  h += F("function pollStatus(){var x=new XMLHttpRequest();x.open('GET','/status',true);");
-  h += F("x.onload=function(){try{document.getElementById('dbHeap').innerText=JSON.parse(x.responseText).heap+'B';}catch(e){}};x.send();}");
-  h += F("setInterval(pollStatus,2000);");
-  h += F("</script></body></html>");
-
-  return h;
-}
+// UI is served from LittleFS: Firmware/AuraCore/data/index.html
+// Upload via Arduino IDE -> Tools -> ESP32 LittleFS Data Upload
 
 // ─── Save / Load ──────────────────────────────────────────────────────────────
 
 void saveConfig() {
-  prefs.begin("aura_core", false);
+  prefs.begin(“aura_core”, false);
   prefs.putUInt("brkL",  ((uint32_t)settings.brakeColorL.r << 16) | ((uint32_t)settings.brakeColorL.g << 8) | settings.brakeColorL.b);
   prefs.putUInt("brkR",  ((uint32_t)settings.brakeColorR.r << 16) | ((uint32_t)settings.brakeColorR.g << 8) | settings.brakeColorR.b);
   prefs.putUInt("drlL",  ((uint32_t)settings.drlColorL.r  << 16) | ((uint32_t)settings.drlColorL.g  << 8) | settings.drlColorL.b);
@@ -352,7 +124,7 @@ void loadConfig() {
   prefs.end();
 }
 
-// ─── LED Logic ────────────────────────────────────────────────────────────────
+// â”€â”€â”€ LED Logic â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 void applyDRL(CRGB* strip, CRGB color, uint8_t mode, unsigned long now) {
   switch (mode) {
@@ -495,7 +267,7 @@ void stepTurn(TurnAnim& anim, bool on, CRGB* strip,
   anim.wasOn = on;
 }
 
-// ─── Setup ────────────────────────────────────────────────────────────────────
+// â”€â”€â”€ Setup â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 void setup() {
   Serial.begin(115200);
@@ -511,23 +283,63 @@ void setup() {
   FastLED.addLeds<WS2812B, GPIO_DATA_2, GRB>(leds2, MAX_LEDS);
   FastLED.setBrightness(settings.brightness);
 
-  WiFi.softAP("AURA_CORE", "aura1234");
-  Serial.println("AP IP: " + WiFi.softAPIP().toString());
+  if (!LittleFS.begin(true)) Serial.println(“LittleFS mount failed”);
 
-  // ── Routes ──
-  server.on("/",         HTTP_GET, [](AsyncWebServerRequest* r){ r->send(200, "text/html", getHTML()); });
+  WiFi.softAP(“AURA_CORE”, “aura1234”);
+  Serial.println(“AP IP: “ + WiFi.softAPIP().toString());
 
-  // Status (JSON for status bar polling)
-  server.on("/status", HTTP_GET, [](AsyncWebServerRequest* r) {
-    StaticJsonDocument<128> doc;
-    doc["drl"]   = digitalRead(GPIO_DRL_IN);
-    doc["brake"] = digitalRead(GPIO_BRAKE_IN);
-    doc["turnL"] = digitalRead(GPIO_TURN_L_IN);
-    doc["turnR"] = digitalRead(GPIO_TURN_R_IN);
-    doc["heap"]  = ESP.getFreeHeap();
+  // ── Static files (index.html + any future assets) ──
+  server.serveStatic(“/”, LittleFS, “/”).setDefaultFile(“index.html”);
+
+  // ── /config — current settings as JSON (used by UI on page load) ──
+  server.on(“/config”, HTTP_GET, [](AsyncWebServerRequest* r) {
+    StaticJsonDocument<512> doc;
+    doc[“brightness”]  = (int)round(settings.brightness / 255.0 * 100);
+    doc[“brakeMode”]   = settings.brakeMode;
+    doc[“brakeColorL”] = colorToHex(settings.brakeColorL);
+    doc[“brakeColorR”] = colorToHex(settings.brakeColorR);
+    doc[“reverseMode”] = settings.reverseMode;
+    doc[“drlMode”]     = settings.drlMode;
+    doc[“drlColorL”]   = colorToHex(settings.drlColorL);
+    doc[“drlColorR”]   = colorToHex(settings.drlColorR);
+    doc[“turnMode”]    = settings.turnMode;
+    doc[“turnColorL”]  = colorToHex(settings.turnColorL);
+    doc[“turnColorR”]  = colorToHex(settings.turnColorR);
+    doc[“wipeSpeed”]   = settings.wipeSpeed;
+    doc[“fineTune”]    = settings.fineTune;
+    doc[“numLeds”]     = settings.numLeds;
+    doc[“invert”]      = settings.invert;
     String out; serializeJson(doc, out);
-    r->send(200, "application/json", out);
+    r->send(200, “application/json”, out);
   });
+
+  // ── /status — heap readout for debug panel ──
+  server.on(“/status”, HTTP_GET, [](AsyncWebServerRequest* r) {
+    StaticJsonDocument<64> doc;
+    doc[“heap”] = ESP.getFreeHeap();
+    String out; serializeJson(doc, out);
+    r->send(200, “application/json”, out);
+  });
+
+  // ── /update — OTA firmware upload ──
+  server.on(“/update”, HTTP_POST,
+    [](AsyncWebServerRequest* r) {
+      bool ok = !Update.hasError();
+      r->send(200, “text/plain”, ok ? “OK” : “FAIL”);
+      if (ok) { delay(500); ESP.restart(); }
+    },
+    [](AsyncWebServerRequest* r, const String& filename, size_t index, uint8_t* data, size_t len, bool final) {
+      if (!index) {
+        Serial.printf(“OTA start: %s\n”, filename.c_str());
+        if (!Update.begin(UPDATE_SIZE_UNKNOWN)) Update.printError(Serial);
+      }
+      if (Update.write(data, len) != len) Update.printError(Serial);
+      if (final) {
+        if (Update.end(true)) Serial.printf(“OTA done: %u bytes\n”, index + len);
+        else Update.printError(Serial);
+      }
+    }
+  );
 
   // Brightness
   server.on("/bright", HTTP_GET, [](AsyncWebServerRequest* r){
@@ -575,7 +387,7 @@ void setup() {
   server.begin();
 }
 
-// ─── Loop ─────────────────────────────────────────────────────────────────────
+// â”€â”€â”€ Loop â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 void loop() {
   unsigned long now = millis();
