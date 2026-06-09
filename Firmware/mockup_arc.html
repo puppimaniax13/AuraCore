@@ -1,0 +1,2037 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<title>ARC</title>
+<style>
+:root {
+  --bg:      #080808;
+  --s1:      #111111;
+  --s2:      #181818;
+  --s3:      #202020;
+  --line:    #1e1e1e;
+  --line2:   #2a2a2a;
+  --text:    #f0f0f0;
+  --sub:     #606060;
+  --muted:   #2e2e2e;
+  --nav-h:   62px;
+  --top-h:   56px;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+html, body { height: 100%; overflow: hidden; background: #080808; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: -apple-system, 'Helvetica Neue', Arial, sans-serif;
+}
+
+/* ── TOPBAR — fixed to viewport top ── */
+.topbar {
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  height: var(--top-h);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 20px;
+  background: var(--bg);
+  z-index: 30;
+}
+.wordmark {
+  font-size: 1.15rem;
+  font-weight: 900;
+  letter-spacing: 5px;
+  color: #fff;
+}
+.wordmark em { font-style: normal; color: #555; }
+.conn {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 0.6rem;
+  font-weight: 700;
+  letter-spacing: 2px;
+  color: #3d9e5f;
+}
+.conn-dot {
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: #3d9e5f;
+  box-shadow: 0 0 8px #3d9e5f;
+  animation: blink 2.5s infinite;
+}
+@keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.2} }
+
+/* ── PAGES — fixed between topbar and nav ── */
+.pages {
+  position: fixed;
+  top: var(--top-h);
+  bottom: calc(var(--nav-h) + env(safe-area-inset-bottom, 0px));
+  left: 0; right: 0;
+  overflow: hidden;
+}
+.page {
+  position: absolute;
+  inset: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 0 16px 20px;
+  display: none;
+  -webkit-overflow-scrolling: touch;
+}
+.page.active { display: block; }
+.page::-webkit-scrollbar { display: none; }
+
+/* ── SPECIAL MODE ACTIVE BANNER (home + tuner) ── */
+.special-banner {
+  display: none;
+  align-items: center;
+  gap: 10px;
+  padding: 11px 0 13px;
+  margin-bottom: 6px;
+  border-bottom: 1px solid rgba(255,50,0,0.18);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.special-banner.active { display: flex; }
+.sb-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #ff4040;
+  flex-shrink: 0;
+  animation: sb-pulse 1.4s ease-in-out infinite;
+}
+@keyframes sb-pulse {
+  0%,100% { opacity: 1; transform: scale(1); }
+  50%      { opacity: 0.35; transform: scale(0.75); }
+}
+.sb-mode {
+  flex: 1;
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 2px;
+  color: #ff5050;
+  text-transform: uppercase;
+}
+.sb-link {
+  font-size: 0.58rem;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  color: var(--sub);
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+/* ── HOME PAGE ── */
+.bright-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 4px 0 18px;
+  border-bottom: 1px solid var(--line);
+  margin-bottom: 16px;
+}
+.bright-label {
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 2px;
+  color: var(--sub);
+  text-transform: uppercase;
+  flex-shrink: 0;
+  width: 46px;
+}
+.bright-track-wrap {
+  flex: 1;
+  position: relative;
+  height: 44px;
+  display: flex;
+  align-items: center;
+}
+input[type='range'].bright {
+  -webkit-appearance: none;
+  width: 100%; height: 6px;
+  border-radius: 3px;
+  background: var(--s3);
+  outline: none;
+}
+input[type='range'].bright::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 28px; height: 28px; border-radius: 50%;
+  background: #fff;
+  border: 3px solid var(--bg);
+  box-shadow: 0 2px 10px rgba(0,0,0,0.8);
+  cursor: pointer;
+}
+.bright-val {
+  font-size: 0.9rem;
+  font-weight: 800;
+  color: #fff;
+  flex-shrink: 0;
+  width: 36px;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── 2×2 ZONE GRID ── */
+.grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+.tile {
+  background: var(--s1);
+  border-radius: 18px;
+  border: 1px solid var(--line2);
+  padding: 18px 16px 0;
+  cursor: pointer;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  min-height: 130px;
+  position: relative;
+  user-select: none;
+  transition: background 0.1s;
+}
+.tile:active { background: var(--s2); }
+.tile-name {
+  font-size: 1.25rem;
+  font-weight: 900;
+  letter-spacing: 0.5px;
+  color: #fff;
+  text-transform: uppercase;
+  line-height: 1;
+}
+.tile-mode {
+  font-size: 0.68rem;
+  font-weight: 600;
+  color: var(--sub);
+  margin-top: 5px;
+  letter-spacing: 0.5px;
+}
+.tile-sub {
+  font-size: 0.58rem;
+  color: var(--muted);
+  margin-top: 1px;
+  letter-spacing: 0.3px;
+}
+.tile-bar {
+  height: 5px;
+  border-radius: 3px;
+  margin-top: auto;
+  margin-bottom: 14px;
+  margin-top: 16px;
+  opacity: 0.85;
+}
+
+/* ── BOTTOM SHEET ── */
+.backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.55);
+  z-index: 50;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.25s;
+}
+.backdrop.open { opacity: 1; pointer-events: all; }
+
+.sheet {
+  position: fixed;
+  bottom: 0;
+  left: 0; right: 0;
+  background: #161616;   /* slightly brighter than --s1 so sheet reads against dark backdrop */
+  border-radius: 24px 24px 0 0;
+  border-top: 1px solid var(--line2);
+  z-index: 70;
+  padding: 0 20px calc(28px + env(safe-area-inset-bottom, 0px));
+  transform: translateY(100%);
+  transition: transform 0.3s cubic-bezier(0.32,0.72,0,1);
+  max-height: 90dvh;
+  max-height: 90vh;
+  overflow-y: auto;
+}
+.sheet::-webkit-scrollbar { display: none; }
+.sheet.open { transform: translateY(0); }
+
+.sheet-handle {
+  width: 36px; height: 4px;
+  background: var(--s3);
+  border-radius: 2px;
+  margin: 12px auto 20px;
+}
+.sheet-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 20px;
+}
+.sheet-title {
+  font-size: 1.3rem;
+  font-weight: 900;
+  color: #fff;
+  letter-spacing: 0.5px;
+  line-height: 1;
+}
+.sheet-sub-text {
+  font-size: 0.62rem;
+  color: var(--sub);
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  margin-top: 4px;
+}
+.sheet-close {
+  width: 30px; height: 30px;
+  border-radius: 50%;
+  background: var(--s3);
+  border: none;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+  font-size: 0.8rem;
+  color: var(--sub);
+  line-height: 1;
+}
+.sheet-lbl {
+  font-size: 0.58rem;
+  font-weight: 700;
+  letter-spacing: 2.5px;
+  color: var(--sub);
+  text-transform: uppercase;
+  margin-bottom: 10px;
+}
+
+/* ── MODE PILLS (in sheet) ── */
+.mode-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 22px;
+}
+.pill {
+  padding: 10px 16px;
+  border-radius: 100px;
+  border: 1px solid var(--line2);
+  background: transparent;
+  color: var(--sub);
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.12s;
+  font-family: inherit;
+}
+.pill.on {
+  background: #fff;
+  border-color: #fff;
+  color: #000;
+}
+
+/* ── COLOR IN SHEET ── */
+.color-wrap { margin-bottom: 14px; }
+input[type='color'].full {
+  display: block;
+  width: 100%; height: 58px;
+  border: 1px solid var(--line2);
+  border-radius: 14px;
+  background: var(--s2);
+  cursor: pointer;
+  padding: 6px;
+}
+.split-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 10px;
+}
+.split-label {
+  font-size: 0.7rem;
+  color: var(--sub);
+}
+.split-btn {
+  padding: 9px 16px;
+  border-radius: 8px;
+  border: 1px solid var(--line2);
+  background: transparent;
+  color: var(--sub);
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 1px;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+/* ── SPLIT L/R PICKERS ── */
+.split-pickers {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-bottom: 4px;
+}
+.split-picker-lbl {
+  font-size: 0.58rem;
+  font-weight: 700;
+  letter-spacing: 2.5px;
+  color: var(--sub);
+  text-transform: uppercase;
+  margin-bottom: 8px;
+}
+
+/* ── SIDE SELECTOR (BOTH / L / R) ── */
+.side-tabs {
+  display: flex;
+  gap: 6px;
+  padding: 0 0 14px;
+}
+.side-tab {
+  flex: 1;
+  padding: 9px 0;
+  border: 1.5px solid var(--line2);
+  border-radius: 10px;
+  background: transparent;
+  color: var(--sub);
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  cursor: pointer;
+  font-family: inherit;
+  transition: all 0.15s;
+}
+.side-tab.on        { background: var(--text); color: #000; border-color: var(--text); }
+.side-tab.tab-l.on  { background: #1a44cc;    color: #fff; border-color: #1a44cc; }
+.side-tab.tab-r.on  { background: #cc2200;    color: #fff; border-color: #cc2200; }
+
+/* ── SHEET SIDE BADGE ── */
+.sheet-side-badge {
+  font-size: 0.55rem;
+  font-weight: 800;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  padding: 4px 10px;
+  border-radius: 100px;
+  background: var(--s3);
+  color: var(--sub);
+  align-self: center;
+  white-space: nowrap;
+}
+.sheet-side-badge.badge-l { background: rgba(26,68,204,0.25); color: #7799ff; }
+.sheet-side-badge.badge-r { background: rgba(204,34,0,0.25);  color: #ff6644; }
+
+/* ── RAINBOW MODE ── */
+.rainbow-display {
+  height: 58px;
+  border-radius: 14px;
+  background: linear-gradient(90deg,
+    #ff0000, #ff5500, #ffaa00, #ffff00,
+    #00ff00, #00ffaa, #00aaff, #0044ff,
+    #8800ff, #ff00aa, #ff0000);
+  background-size: 300% 100%;
+  animation: rbshift 10s linear infinite;
+  margin-bottom: 18px;
+}
+@keyframes rbshift {
+  0%   { background-position: 0% 50%; }
+  100% { background-position: 300% 50%; }
+}
+.tile-bar.rainbow {
+  background: linear-gradient(90deg,
+    #ff0000, #ff8800, #ffff00, #00ff00,
+    #00aaff, #8800ff, #ff0000);
+  background-size: 300% 100%;
+  animation: rbshift 10s linear infinite;
+  opacity: 1;
+}
+.rainbow-speed-ends {
+  display: flex; justify-content: space-between;
+  font-size: 0.6rem; color: var(--sub);
+}
+
+/* ── MODE ANIMATION PREVIEW ── */
+.mode-anim-bar {
+  height: 58px;
+  border-radius: 14px;
+  margin-bottom: 14px;
+  /* background color set by JS to match zone color */
+}
+/*
+  One-shot modes (f1-flash, two-tap, fade-in):
+  animation-fill-mode: forwards — plays once, holds final solid state.
+  JS restarts the animation each time the mode is selected or sheet opens
+  (= simulating releasing and re-pressing the brake).
+
+  Looping modes (pulse, breathe, sequential):
+  infinite — they genuinely repeat while active.
+*/
+
+/* F1 Flash — 5 rapid bursts then solid, PLAY ONCE */
+@keyframes f1flash {
+  0%    { opacity: 1; }
+  3.3%  { opacity: 0.04; }
+  6.6%  { opacity: 1; }
+  10%   { opacity: 0.04; }
+  13.3% { opacity: 1; }
+  16.6% { opacity: 0.04; }
+  20%   { opacity: 1; }
+  23.3% { opacity: 0.04; }
+  26.6% { opacity: 1; }
+  30%   { opacity: 0.04; }
+  33.3% { opacity: 1; }  /* goes solid — never resets until brake released */
+  100%  { opacity: 1; }
+}
+/* 2-Tap — two blinks then solid, PLAY ONCE */
+@keyframes twotap {
+  0%   { opacity: 0.04; }
+  4%   { opacity: 1; }
+  9%   { opacity: 0.04; }
+  13%  { opacity: 1; }
+  18%  { opacity: 1; }   /* solid — holds for rest of brake press */
+  100% { opacity: 1; }
+}
+/* Pulse — continuous breathing while brake held */
+@keyframes pulseanim {
+  0%,100% { opacity: 0.1; }
+  50%     { opacity: 1; }
+}
+/* Fade In — ramps up once, holds solid, PLAY ONCE */
+@keyframes fadeinanim {
+  0%   { opacity: 0; }
+  40%  { opacity: 1; }
+  100% { opacity: 1; }
+}
+/* Sequential wipe — fast fill, hold solid, snap off.
+   The clip-path reset happens WHILE the bar is invisible (during the off
+   pause), so there is zero visible snap at the loop boundary. */
+@keyframes seqwipe {
+  0%   { clip-path: inset(0 100% 0 0); opacity: 1; }  /* empty  — ready  */
+  20%  { clip-path: inset(0 0%   0 0); opacity: 1; }  /* full   — wipe done */
+  50%  { clip-path: inset(0 0%   0 0); opacity: 1; }  /* hold solid */
+  54%  { clip-path: inset(0 0%   0 0); opacity: 0; }  /* snap off */
+  96%  { clip-path: inset(0 100% 0 0); opacity: 0; }  /* reset clip while dark */
+  100% { clip-path: inset(0 100% 0 0); opacity: 0; }  /* off pause ends */
+}
+/* Breathe — continuous slow inhale/exhale for DRL */
+@keyframes breatheanim {
+  0%,100% { opacity: 0.08; }
+  50%     { opacity: 1; }
+}
+
+/* one-shot: forwards holds final state, no loop */
+.mode-anim-bar.f1-flash { animation: f1flash 3s step-end forwards; }
+.mode-anim-bar.two-tap  { animation: twotap 3s step-end forwards; }
+.mode-anim-bar.fade-in  { animation: fadeinanim 2s ease-out forwards; }
+/* looping modes */
+.mode-anim-bar.pulse      { animation: pulseanim 1.8s ease-in-out infinite; }
+.mode-anim-bar.sequential { animation: seqwipe 1.6s ease-out infinite; }
+.mode-anim-bar.breathe    { animation: breatheanim 2.8s ease-in-out infinite; }
+
+/* ── STARTUP ANIMATION PREVIEWS (play-once, hold final state) ── */
+@keyframes su-breathe {
+  /* all LEDs slowly breathe up from dark */
+  0%   { opacity: 0; }
+  75%  { opacity: 1; }
+  100% { opacity: 1; }
+}
+@keyframes su-wipe {
+  /* fills from the center outward to both sides */
+  0%   { clip-path: inset(0 50% 0 50%); opacity: 1; }
+  65%  { clip-path: inset(0 0%  0 0%);  opacity: 1; }
+  100% { clip-path: inset(0 0%  0 0%);  opacity: 1; }
+}
+@keyframes su-cascade {
+  /* left-to-right sequential fill */
+  0%   { clip-path: inset(0 100% 0 0); opacity: 1; }
+  70%  { clip-path: inset(0 0%   0 0); opacity: 1; }
+  100% { clip-path: inset(0 0%   0 0); opacity: 1; }
+}
+@keyframes su-flash {
+  /* three rapid flashes then solid — like "waking up" */
+  0%,14%  { opacity: 1; }
+  15%,29% { opacity: 0.04; }
+  30%,44% { opacity: 1; }
+  45%,57% { opacity: 0.04; }
+  58%,70% { opacity: 1; }
+  71%,80% { opacity: 0.04; }
+  81%,100%{ opacity: 1; }
+}
+@keyframes su-knight {
+  /* bright hotspot sweeps left→right→left then expands to full */
+  0%   { background: linear-gradient(90deg,#cc2200 0%,#ff6600 6%,#cc2200 14%,#330000 30%,#0a0000 100%); }
+  22%  { background: linear-gradient(90deg,#0a0000 0%,#220000 28%,#cc2200 40%,#ff6600 46%,#cc2200 52%,#220000 64%,#0a0000 100%); }
+  44%  { background: linear-gradient(90deg,#0a0000 0%,#0a0000 56%,#220000 68%,#cc2200 80%,#ff6600 88%,#cc2200 94%,#220000 100%); }
+  66%  { background: linear-gradient(90deg,#0a0000 0%,#220000 28%,#cc2200 40%,#ff6600 46%,#cc2200 52%,#220000 64%,#0a0000 100%); }
+  84%  { background: linear-gradient(90deg,#cc2200 0%,#ff6600 6%,#cc2200 14%,#330000 30%,#0a0000 100%); }
+  100% { background: #ff2200; }
+}
+.mode-anim-bar.su-breathe { animation: su-breathe 2.2s ease-in      forwards; }
+.mode-anim-bar.su-wipe    { animation: su-wipe    1.8s ease-out     forwards; }
+.mode-anim-bar.su-cascade { animation: su-cascade 1.8s ease-out     forwards; }
+.mode-anim-bar.su-flash   { animation: su-flash   2s   step-end     forwards; }
+.mode-anim-bar.su-knight  { animation: su-knight  2.4s ease-in-out  forwards; }
+
+/* ── SHOWROOM / SPECIAL MODES PAGE ── */
+.spcl-header {
+  padding: 28px 0 18px;
+}
+.spcl-header-title {
+  font-size: 0.58rem;
+  font-weight: 700;
+  letter-spacing: 4px;
+  color: var(--sub);
+  text-transform: uppercase;
+  margin-bottom: 8px;
+}
+.spcl-header-sub {
+  font-size: 0.8rem;
+  color: var(--sub);
+  line-height: 1.5;
+}
+.spcl-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding-bottom: 100px; /* room for sticky button */
+}
+.spcl-card {
+  position: relative;
+  background: var(--s1);
+  border: 1.5px solid var(--line2);
+  border-radius: 18px;
+  overflow: hidden;
+  cursor: pointer;
+  transition: border-color 0.2s;
+  -webkit-tap-highlight-color: transparent;
+}
+.spcl-card.selected {
+  border-color: rgba(255,255,255,0.28);
+}
+.spcl-card-body {
+  padding: 16px 16px 14px;
+}
+.spcl-name {
+  font-size: 1.05rem;
+  font-weight: 900;
+  letter-spacing: 0.8px;
+  color: #fff;
+  text-transform: uppercase;
+}
+.spcl-desc {
+  font-size: 0.68rem;
+  color: var(--sub);
+  margin-top: 5px;
+  line-height: 1.45;
+}
+.spcl-tag {
+  display: inline-block;
+  margin-top: 10px;
+  font-size: 0.5rem;
+  font-weight: 800;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: #b07000;
+  background: rgba(160,100,0,0.12);
+  border: 1px solid rgba(160,100,0,0.22);
+  border-radius: 4px;
+  padding: 2px 7px;
+}
+.spcl-card.selected .spcl-tag {
+  color: #d4a000;
+  background: rgba(200,150,0,0.16);
+  border-color: rgba(200,150,0,0.3);
+}
+/* Preview bar — horizontal LED strip at bottom of card */
+.spcl-bar-wrap {
+  display: flex;
+  height: 10px;
+  border-radius: 0 0 16px 16px;
+  overflow: hidden;
+}
+.sp-half {
+  flex: 1;
+  height: 100%;
+}
+.sp-full {
+  flex: 1;
+  height: 100%;
+}
+/* Selected glow effect on bar */
+.spcl-card.selected .spcl-bar-wrap {
+  filter: brightness(1.2);
+}
+
+/* Running state — pulsing border + lock out interaction */
+@keyframes card-running-pulse {
+  0%,100% { border-color: rgba(255,255,255,0.25); }
+  50%     { border-color: rgba(255,255,255,0.65); }
+}
+.spcl-card.running {
+  animation: card-running-pulse 1.6s ease-in-out infinite;
+  pointer-events: none;
+}
+.spcl-card.running .spcl-bar-wrap {
+  filter: brightness(1.4);
+}
+/* "NOW ACTIVE" badge injected by JS into each running card */
+.spcl-active-badge {
+  display: inline-block;
+  margin-top: 10px;
+  margin-left: 6px;
+  font-size: 0.5rem;
+  font-weight: 800;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: #fff;
+  background: rgba(255,255,255,0.12);
+  border: 1px solid rgba(255,255,255,0.25);
+  border-radius: 4px;
+  padding: 2px 7px;
+  vertical-align: middle;
+}
+
+/* Activate button — fixed just above the nav bar */
+.spcl-activate {
+  position: fixed;
+  left: 20px;
+  right: 20px;
+  bottom: calc(var(--nav-h) + env(safe-area-inset-bottom, 0px) + 12px);
+  padding: 20px;
+  border-radius: 18px;
+  border: 1.5px solid var(--line2);
+  background: var(--s2);
+  color: var(--sub);
+  font-size: 0.82rem;
+  font-weight: 900;
+  letter-spacing: 3px;
+  cursor: default;
+  text-transform: uppercase;
+  font-family: inherit;
+  z-index: 45;          /* above page content + nav (z40), below backdrop (z50) */
+  transition: background 0.25s, color 0.25s, border-color 0.25s;
+  pointer-events: none;
+}
+.spcl-activate.ready {
+  background: #fff;
+  color: #000;
+  border-color: #fff;
+  cursor: pointer;
+  pointer-events: auto;
+}
+.spcl-activate.running {
+  background: #1e0808;
+  color: #ff5050;
+  border-color: #ff4040;
+  cursor: pointer;
+  pointer-events: auto;
+}
+/* hidden by default; showPage() reveals it only on the showroom page */
+.spcl-activate { display: none; }
+
+/* ── DISCLAIMER SHEET ── */
+.disc-warn {
+  display: inline-block;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: 2px solid #b07000;
+  color: #b07000;
+  font-size: 1.1rem;
+  font-weight: 900;
+  line-height: 32px;
+  text-align: center;
+  margin-bottom: 14px;
+}
+.disc-title {
+  font-size: 1rem;
+  font-weight: 900;
+  letter-spacing: 1.5px;
+  color: #fff;
+  text-transform: uppercase;
+  margin-bottom: 16px;
+}
+.disc-body {
+  font-size: 0.75rem;
+  color: var(--sub);
+  line-height: 1.65;
+  margin-bottom: 24px;
+}
+.disc-body strong {
+  color: #c4c4c4;
+  font-weight: 700;
+}
+.disc-body ul {
+  margin: 8px 0 8px 4px;
+  padding-left: 14px;
+}
+.disc-body li {
+  margin-bottom: 5px;
+}
+.disc-accept {
+  display: block;
+  width: 100%;
+  padding: 20px;
+  border-radius: 14px;
+  border: 1.5px solid #ff4040;
+  background: #1a0a0a;
+  color: #ff4040;
+  font-size: 0.78rem;
+  font-weight: 900;
+  letter-spacing: 2.5px;
+  text-transform: uppercase;
+  font-family: inherit;
+  cursor: pointer;
+  margin-bottom: 10px;
+}
+.disc-cancel {
+  display: block;
+  width: 100%;
+  padding: 16px;
+  border-radius: 14px;
+  border: 1px solid var(--line2);
+  background: transparent;
+  color: var(--sub);
+  font-size: 0.8rem;
+  font-weight: 700;
+  font-family: inherit;
+  cursor: pointer;
+}
+
+/* ── SPECIAL MODE PREVIEW ANIMATIONS ── */
+
+/* Police — red left, blue right, hard alternating */
+@keyframes police-l {
+  0%,46%   { opacity: 1; }
+  50%,100% { opacity: 0.04; }
+}
+@keyframes police-r {
+  0%,46%   { opacity: 0.04; }
+  50%,100% { opacity: 1; }
+}
+.sp-police-l { background: #ff1100; animation: police-l 0.55s step-end infinite; }
+.sp-police-r { background: #1144ff; animation: police-r 0.55s step-end infinite; }
+
+/* Strobelight — rapid white double-flash */
+@keyframes strobeflash {
+  0%,10%   { opacity: 1; }
+  11%,35%  { opacity: 0; }
+  36%,46%  { opacity: 1; }
+  47%,100% { opacity: 0; }
+}
+.sp-strobe { background: #ffffff; animation: strobeflash 0.32s step-end infinite; }
+
+/* Rave — full spectrum cycle */
+@keyframes ravecycle {
+  0%   { background: #ff0022; }
+  17%  { background: #ff8800; }
+  33%  { background: #e8ff00; }
+  50%  { background: #00ee55; }
+  67%  { background: #0088ff; }
+  83%  { background: #cc00ff; }
+  100% { background: #ff0022; }
+}
+.sp-rave { animation: ravecycle 1.4s linear infinite; }
+
+/* Neon Drift — cyan left, magenta right, softer swap */
+@keyframes drift-l {
+  0%,40%   { opacity: 1; }
+  55%,95%  { opacity: 0.06; }
+  100%     { opacity: 1; }
+}
+@keyframes drift-r {
+  0%,40%   { opacity: 0.06; }
+  55%,95%  { opacity: 1; }
+  100%     { opacity: 0.06; }
+}
+.sp-drift-l { background: #00e5ff; animation: drift-l 0.8s step-end infinite; }
+.sp-drift-r { background: #ff00cc; animation: drift-r 0.8s step-end infinite; }
+
+/* Fire — red-orange heat wave */
+@keyframes firepulse {
+  0%   { background: #ff1100; opacity: 0.5;  }
+  30%  { background: #ff6600; opacity: 1;    }
+  55%  { background: #ffaa00; opacity: 0.8;  }
+  80%  { background: #ff3300; opacity: 1;    }
+  100% { background: #ff1100; opacity: 0.5;  }
+}
+.sp-fire { animation: firepulse 2s ease-in-out infinite; }
+
+/* ── SETTINGS SHEET ── */
+.ss-desc {
+  font-size: 0.72rem;
+  color: var(--sub);
+  line-height: 1.55;
+  margin-bottom: 20px;
+}
+.ss-picks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+/* reuses .pill / .pill.on from mode-pills */
+.ss-num-row {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  margin-bottom: 10px;
+}
+.ss-num-big {
+  font-size: 2.6rem;
+  font-weight: 900;
+  color: #fff;
+  line-height: 1;
+}
+.ss-num-unit {
+  font-size: 0.72rem;
+  color: var(--sub);
+  font-weight: 600;
+}
+/* about sheet rows */
+.about-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 14px 0;
+  border-bottom: 1px solid var(--line);
+}
+.about-row:last-child { border-bottom: none; }
+.about-row-label {
+  font-size: 0.78rem;
+  color: var(--sub);
+}
+.about-row-val {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--text);
+}
+/* factory reset confirm */
+.reset-body {
+  font-size: 0.75rem;
+  color: var(--sub);
+  line-height: 1.65;
+  margin-bottom: 24px;
+}
+.reset-body strong { color: #c4c4c4; }
+.btn-danger {
+  display: block; width: 100%;
+  padding: 20px;
+  border-radius: 14px;
+  border: 1.5px solid #ff3030;
+  background: #1a0808;
+  color: #ff4040;
+  font-size: 0.78rem;
+  font-weight: 900;
+  letter-spacing: 2.5px;
+  text-transform: uppercase;
+  font-family: inherit;
+  cursor: pointer;
+  margin-bottom: 10px;
+}
+.btn-cancel {
+  display: block; width: 100%;
+  padding: 16px;
+  border-radius: 14px;
+  border: 1px solid var(--line2);
+  background: transparent;
+  color: var(--sub);
+  font-size: 0.8rem;
+  font-weight: 700;
+  font-family: inherit;
+  cursor: pointer;
+}
+/* firmware update sheet */
+.fw-upload-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  width: 100%;
+  padding: 22px;
+  border-radius: 14px;
+  border: 1.5px dashed var(--line2);
+  background: var(--s2);
+  color: var(--text);
+  font-size: 0.82rem;
+  font-weight: 700;
+  font-family: inherit;
+  cursor: pointer;
+  margin-bottom: 14px;
+  letter-spacing: 0.5px;
+}
+.fw-version-note {
+  font-size: 0.68rem;
+  color: var(--sub);
+  text-align: center;
+  line-height: 1.55;
+}
+
+/* ── TUNER PAGE ── */
+.tuner-group { margin-bottom: 8px; }
+.tuner-group-label {
+  font-size: 0.58rem;
+  font-weight: 700;
+  letter-spacing: 2.5px;
+  color: var(--sub);
+  text-transform: uppercase;
+  padding: 18px 0 8px;
+}
+.tuner-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 58px;
+  border-bottom: 1px solid var(--line);
+  cursor: pointer;
+}
+.tuner-row:last-child { border-bottom: none; }
+.tuner-row-name {
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: var(--text);
+}
+.tuner-row-val {
+  font-size: 0.78rem;
+  color: var(--sub);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.tuner-action { color: #fff; font-weight: 700; }
+.tuner-danger { color: #ff4455; }
+
+.wipe-section { padding-top: 4px; }
+.speed-header {
+  display: flex; justify-content: space-between; align-items: baseline;
+  margin-bottom: 12px;
+}
+.speed-lbl { font-size:0.58rem; font-weight:700; letter-spacing:2.5px; color:var(--sub); text-transform:uppercase; }
+.speed-val { font-size:0.88rem; font-weight:800; color:#fff; font-variant-numeric:tabular-nums; }
+input[type='range'].speed {
+  -webkit-appearance: none; width: 100%; height: 6px;
+  border-radius: 3px; background: var(--s3); outline: none; cursor: pointer;
+}
+input[type='range'].speed::-webkit-slider-thumb {
+  -webkit-appearance: none; width: 28px; height: 28px; border-radius: 50%;
+  background: #fff; border: 3px solid var(--bg);
+  box-shadow: 0 2px 10px rgba(0,0,0,0.8);
+}
+.speed-ends {
+  display: flex; justify-content: space-between;
+  margin-top: 8px; font-size: 0.6rem; color: var(--sub);
+}
+
+/* ── BOTTOM NAV — fixed to viewport bottom ── */
+.bottom-nav {
+  position: fixed;
+  bottom: 0; left: 0; right: 0;
+  height: calc(var(--nav-h) + env(safe-area-inset-bottom, 0px));
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+  background: var(--s1);
+  border-top: 1px solid var(--line2);
+  display: flex;
+  align-items: stretch;
+  z-index: 40;
+}
+.nav-btn {
+  flex: 1;
+  background: none;
+  border: none;
+  color: var(--sub);
+  font-family: inherit;
+  font-size: 0.6rem;
+  font-weight: 800;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  position: relative;
+  transition: color 0.12s;
+}
+.nav-btn.on { color: #fff; }
+.nav-btn.on::after {
+  content: '';
+  position: absolute;
+  top: 0; left: 30%; right: 30%;
+  height: 2px;
+  background: #fff;
+  border-radius: 0 0 2px 2px;
+}
+.nav-icon {
+  width: 22px;
+  height: 22px;
+  display: block;
+  flex-shrink: 0;
+}
+</style>
+</head>
+<body>
+
+<!-- TOPBAR -->
+<div class="topbar">
+  <div class="wordmark">AURA<em>CORE</em></div>
+  <div class="conn"><div class="conn-dot"></div>ONLINE</div>
+</div>
+
+<!-- PAGES -->
+<div class="pages">
+
+  <!-- ═══ HOME ═══ -->
+  <div class="page active" id="pg-home">
+
+    <!-- Brightness -->
+    <div class="bright-row">
+      <div class="bright-label">BRIGHT</div>
+      <div class="bright-track-wrap">
+        <input type="range" class="bright" min="0" max="100" value="72"
+          oninput="document.getElementById('bVal').innerText=this.value+'%'">
+      </div>
+      <div class="bright-val" id="bVal">72%</div>
+    </div>
+
+    <!-- Side selector — BOTH / L / R -->
+    <div class="side-tabs">
+      <button class="side-tab on"       id="stab-both" onclick="switchSide('both')">BOTH</button>
+      <button class="side-tab tab-l"    id="stab-L"    onclick="switchSide('L')">L</button>
+      <button class="side-tab tab-r"    id="stab-R"    onclick="switchSide('R')">R</button>
+    </div>
+
+    <!-- Zone grid — order: DRL, Turn, Brake, Reverse -->
+    <div class="grid">
+      <div class="tile" onclick="openSheet('drl')">
+        <div class="tile-name">DRL</div>
+        <div class="tile-mode" id="tile-mode-drl">Solid</div>
+        <div class="tile-bar" id="tile-bar-drl" style="background:#cc1100; box-shadow:0 0 12px rgba(204,17,0,0.5);"></div>
+      </div>
+      <div class="tile" onclick="openSheet('turn')">
+        <div class="tile-name">Turn</div>
+        <div class="tile-mode" id="tile-mode-turn">Solid</div>
+        <div class="tile-bar" id="tile-bar-turn" style="background:#ff8800; box-shadow:0 0 12px rgba(255,136,0,0.5);"></div>
+      </div>
+      <div class="tile" onclick="openSheet('brake')">
+        <div class="tile-name">Brake</div>
+        <div class="tile-mode" id="tile-mode-brake">Solid</div>
+        <div class="tile-bar" id="tile-bar-brake" style="background:#ff2200; box-shadow:0 0 12px rgba(255,34,0,0.5);"></div>
+      </div>
+      <div class="tile" onclick="openSheet('rev')">
+        <div class="tile-name">Reverse</div>
+        <div class="tile-mode" id="tile-mode-rev">Solid</div>
+        <div class="tile-bar" id="tile-bar-rev" style="background:#e8e8e8; box-shadow:0 0 12px rgba(232,232,232,0.3);"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ SHOWROOM ═══ -->
+  <div class="page" id="pg-show">
+    <div class="spcl-header">
+      <div class="spcl-header-title">Special Modes</div>
+      <div class="spcl-header-sub">Show, track, and off-road effects. Not for public road use.</div>
+    </div>
+    <div class="spcl-list" id="spcl-list">
+      <!-- cards built by JS -->
+    </div>
+  </div>
+
+  <!-- ═══ TUNER ═══ -->
+  <div class="page" id="pg-tuner">
+
+    <!-- Slim special-mode banner (shows when a showroom mode is running) -->
+    <div class="special-banner" id="tuner-banner" onclick="showPage('show')">
+      <div class="sb-dot"></div>
+      <div class="sb-mode" id="tuner-banner-text">POLICE ACTIVE</div>
+      <div class="sb-link">SHOWROOM →</div>
+    </div>
+
+    <div class="tuner-group-label">HARDWARE</div>
+    <div class="tuner-row" onclick="openSetting('ledCount')">
+      <span class="tuner-row-name">LED Count — Per Side</span>
+      <span class="tuner-row-val" id="tv-ledCount">20 <span style="color:var(--muted)">›</span></span>
+    </div>
+    <div class="tuner-row" onclick="openSetting('swapLR')">
+      <span class="tuner-row-name">Swap Left / Right</span>
+      <span class="tuner-row-val" id="tv-swapLR">Normal <span style="color:var(--muted)">›</span></span>
+    </div>
+    <div class="tuner-row" style="border-bottom:none" onclick="openSetting('ledType')">
+      <span class="tuner-row-name">LED Type</span>
+      <span class="tuner-row-val" id="tv-ledType">WS2812B <span style="color:var(--muted)">›</span></span>
+    </div>
+
+    <div class="tuner-group-label">PREFERENCES</div>
+    <div class="tuner-row" onclick="openSetting('autoOff')">
+      <span class="tuner-row-name">Auto-Off Timer</span>
+      <span class="tuner-row-val" id="tv-autoOff">5 min <span style="color:var(--muted)">›</span></span>
+    </div>
+    <div class="tuner-row" onclick="openSetting('startupMode')">
+      <span class="tuner-row-name">Startup Mode</span>
+      <span class="tuner-row-val" id="tv-startupMode">Last Used <span style="color:var(--muted)">›</span></span>
+    </div>
+    <div class="tuner-row" style="border-bottom:none" onclick="openSetting('startupAnim')">
+      <span class="tuner-row-name">Startup Animation</span>
+      <span class="tuner-row-val" id="tv-startupAnim">None <span style="color:var(--muted)">›</span></span>
+    </div>
+
+    <div class="tuner-group-label">SYSTEM</div>
+    <div class="tuner-row" onclick="openFirmwareUpdate()">
+      <span class="tuner-row-name">Firmware Update</span>
+      <span class="tuner-row-val tuner-action">Upload .bin ›</span>
+    </div>
+    <div class="tuner-row" onclick="openAbout()">
+      <span class="tuner-row-name">About</span>
+      <span class="tuner-row-val">v1.0.0 <span style="color:var(--muted)">›</span></span>
+    </div>
+    <div class="tuner-row" style="border-bottom:none" onclick="openFactoryReset()">
+      <span class="tuner-row-name tuner-danger">Factory Reset</span>
+      <span class="tuner-row-val" style="color:var(--muted)">›</span>
+    </div>
+
+  </div>
+
+</div><!-- /pages -->
+
+<!-- SHOWROOM ACTIVATE BUTTON — outside .pages so z-index works in root stacking context -->
+<button class="spcl-activate" id="spclBtn" onclick="activateSpecial()">ACTIVATE</button>
+
+<!-- BOTTOM SHEET BACKDROP — shared by mode sheet + disclaimer -->
+<div class="backdrop" id="backdrop" onclick="onBackdropTap()"></div>
+
+<!-- DISCLAIMER SHEET — outside .pages so it stacks above the backdrop correctly -->
+<div class="sheet" id="disc-sheet">
+  <div class="sheet-handle"></div>
+  <div class="disc-warn">!</div>
+  <div class="disc-title">Before You Activate</div>
+  <div class="disc-body">
+    <strong>These modes are for off-road, private property, and show use only.</strong>
+    <ul>
+      <li>Police-style patterns are illegal to display on public roads in most states and countries.</li>
+      <li>High-frequency strobing may trigger photosensitive reactions in bystanders.</li>
+      <li>Any of these modes may distract or confuse other drivers.</li>
+    </ul>
+    By tapping below, you accept <strong>full personal responsibility</strong> for how and where these modes are used. AuraCore and its developers assume no liability.
+  </div>
+  <button class="disc-accept" onclick="confirmSpecial()">I Accept Full Responsibility</button>
+  <button class="disc-cancel" onclick="closeDisclaimer()">Cancel</button>
+</div>
+
+<!-- SETTINGS SHEET (generic pick / number) -->
+<div class="sheet" id="settings-sheet">
+  <div class="sheet-handle"></div>
+  <div class="sheet-head">
+    <div class="sheet-title" id="ss-title"></div>
+    <button class="sheet-close" onclick="closeSettingsSheet()">✕</button>
+  </div>
+  <div class="ss-desc" id="ss-desc"></div>
+  <div id="ss-content"></div>
+</div>
+
+<!-- ABOUT SHEET -->
+<div class="sheet" id="about-sheet">
+  <div class="sheet-handle"></div>
+  <div class="sheet-head">
+    <div class="sheet-title">About AuraCore</div>
+    <button class="sheet-close" onclick="closeAbout()">✕</button>
+  </div>
+  <div class="about-row">
+    <span class="about-row-label">Firmware</span>
+    <span class="about-row-val">v1.0.0</span>
+  </div>
+  <div class="about-row">
+    <span class="about-row-label">Hardware</span>
+    <span class="about-row-val">PCB Rev 1.0</span>
+  </div>
+  <div class="about-row">
+    <span class="about-row-label">Device IP</span>
+    <span class="about-row-val" id="about-ip">—</span>
+  </div>
+  <div class="about-row">
+    <span class="about-row-label">LED Bus</span>
+    <span class="about-row-val" id="about-ledbus">GPIO 12 · 13 · 14</span>
+  </div>
+  <div class="about-row">
+    <span class="about-row-label">Build</span>
+    <span class="about-row-val">2025-06-09</span>
+  </div>
+</div>
+
+<!-- FIRMWARE UPDATE SHEET -->
+<div class="sheet" id="fw-sheet">
+  <div class="sheet-handle"></div>
+  <div class="sheet-head">
+    <div class="sheet-title">Firmware Update</div>
+    <button class="sheet-close" onclick="closeFwSheet()">✕</button>
+  </div>
+  <div class="ss-desc">Upload a compiled <strong style="color:var(--text)">.bin</strong> file to update the AuraCore firmware over Wi-Fi. The device will restart automatically after flashing.</div>
+  <label class="fw-upload-btn">
+    <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M10 13V4M6 7l4-4 4 4"/><rect x="3" y="14" width="14" height="3" rx="1.5" fill="none"/>
+    </svg>
+    Choose .bin File
+    <input type="file" accept=".bin" style="display:none" onchange="handleFwFile(this)">
+  </label>
+  <div class="fw-version-note">Currently running <strong style="color:var(--text)">v1.0.0</strong><br>Make sure you trust the source of any firmware file before flashing.</div>
+</div>
+
+<!-- FACTORY RESET SHEET -->
+<div class="sheet" id="reset-sheet">
+  <div class="sheet-handle"></div>
+  <div class="disc-warn">!</div>
+  <div class="disc-title">Factory Reset</div>
+  <div class="reset-body">
+    This will <strong>erase all saved settings</strong> and return AuraCore to its defaults.<br><br>
+    Colors, modes, LED config, and all preferences will be lost. The device will restart.
+  </div>
+  <button class="btn-danger" onclick="confirmFactoryReset()">Erase Everything &amp; Reset</button>
+  <button class="btn-cancel" onclick="closeResetSheet()">Cancel</button>
+</div>
+
+<!-- BOTTOM SHEET -->
+<div class="sheet" id="sheet">
+  <div class="sheet-handle"></div>
+  <div class="sheet-head">
+    <div class="sheet-title" id="sheet-title">BRAKE LIGHT</div>
+    <div style="display:flex;gap:8px;align-items:center">
+      <div class="sheet-side-badge" id="sheet-side-badge">BOTH</div>
+      <button class="sheet-close" onclick="closeSheet()">✕</button>
+    </div>
+  </div>
+
+  <div class="sheet-lbl">EFFECT MODE</div>
+  <div class="mode-pills" id="sheet-pills"></div>
+
+  <!-- Color section — hidden for Reverse -->
+  <div id="clr-section">
+
+    <!-- Animation / gradient preview bar — JS shows/hides + sets content -->
+    <div id="mode-anim-wrap" style="display:none">
+      <div class="sheet-lbl">PREVIEW</div>
+      <div id="mode-anim-bar" class="mode-anim-bar"></div>
+    </div>
+
+    <!-- Solid + animated mode color picker -->
+    <div id="clr-sync" style="display:none">
+      <div class="sheet-lbl">COLOR</div>
+      <input type="color" class="full" id="sheet-color" value="#FF0000">
+    </div>
+
+    <!-- Rainbow view -->
+    <div id="clr-rainbow" style="display:none">
+      <div class="sheet-lbl">RAINBOW SPEED</div>
+      <div class="rainbow-display"></div>
+      <input type="range" class="speed" id="rainbow-speed" min="1" max="10" value="5"
+        oninput="setRainbowSpeed(this.value)">
+      <div class="rainbow-speed-ends" style="margin-top:6px">
+        <span>Slow</span><span>Fast</span>
+      </div>
+    </div>
+
+    <!-- Gradient view — two color endpoints -->
+    <div id="clr-gradient" style="display:none">
+      <div class="sheet-lbl">GRADIENT COLORS</div>
+      <div class="split-pickers">
+        <div>
+          <div class="split-picker-lbl">COLOR A</div>
+          <input type="color" class="full" id="grad-color-a" value="#ff2200">
+        </div>
+        <div>
+          <div class="split-picker-lbl">COLOR B</div>
+          <input type="color" class="full" id="grad-color-b" value="#440000">
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- BOTTOM NAV -->
+<nav class="bottom-nav">
+
+  <!-- HOME — 2×2 zone grid -->
+  <button class="nav-btn on" id="nav-home" onclick="showPage('home')">
+    <svg class="nav-icon" viewBox="0 0 22 22" fill="currentColor">
+      <rect x="2"    y="2"    width="8.5" height="8.5" rx="2"/>
+      <rect x="11.5" y="2"    width="8.5" height="8.5" rx="2"/>
+      <rect x="2"    y="11.5" width="8.5" height="8.5" rx="2"/>
+      <rect x="11.5" y="11.5" width="8.5" height="8.5" rx="2"/>
+    </svg>
+    HOME
+  </button>
+
+  <!-- SHOWROOM — 4-point sparkle -->
+  <button class="nav-btn" id="nav-show" onclick="showPage('show')">
+    <svg class="nav-icon" viewBox="0 0 22 22" fill="currentColor">
+      <path d="M11 2 L13.5 8.5 L20 11 L13.5 13.5 L11 20 L8.5 13.5 L2 11 L8.5 8.5 Z"/>
+    </svg>
+    SHOWROOM
+  </button>
+
+  <!-- TUNER — horizontal sliders with knobs -->
+  <button class="nav-btn" id="nav-tuner" onclick="showPage('tuner')">
+    <svg class="nav-icon" viewBox="0 0 22 22">
+      <line x1="2" y1="5.5"  x2="20" y2="5.5"  stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+      <line x1="2" y1="11"   x2="20" y2="11"   stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+      <line x1="2" y1="16.5" x2="20" y2="16.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+      <circle cx="15" cy="5.5"  r="2.5" fill="currentColor"/>
+      <circle cx="7"  cy="11"   r="2.5" fill="currentColor"/>
+      <circle cx="15" cy="16.5" r="2.5" fill="currentColor"/>
+    </svg>
+    TUNER
+  </button>
+
+</nav>
+
+<script>
+/* map mode label → animation class for the preview bar */
+var modeAnim = {
+  'F1 Flash':  'f1-flash',
+  '2-Tap':     'two-tap',
+  'Pulse':     'pulse',
+  'Fade In':   'fade-in',
+  'Sequential':'sequential',
+  'Breathe':   'breathe',
+  'Gradient':  null   // static gradient, no CSS animation
+};
+
+// Per-side data: color, mode, gradA/gradB for Gradient mode
+function mkSide(color, mode, gradB) {
+  return { color: color, mode: mode, gradA: color, gradB: gradB || '#220000' };
+}
+var zones = {
+  brake: { title:'BRAKE LIGHT', noColor:false,
+    modes:['Solid','F1 Flash','2-Tap','Pulse','Fade In','Gradient'],
+    L: mkSide('#ff2200','Solid','#880000'),
+    R: mkSide('#ff2200','Solid','#880000') },
+  drl:   { title:'DRL',         noColor:false,
+    modes:['Solid','Rainbow','Breathe','Gradient'],
+    L: mkSide('#cc1100','Solid','#550000'),
+    R: mkSide('#cc1100','Solid','#550000') },
+  turn:  { title:'TURN SIGNAL', noColor:false,
+    modes:['Sequential','Solid','Rainbow','Gradient'],
+    L: mkSide('#ff8800','Sequential','#553300'),
+    R: mkSide('#ff8800','Sequential','#553300') },
+  rev:   { title:'REVERSE',     noColor:true,
+    modes:['Solid','Fade In'],
+    L: mkSide('#e8e8e8','Solid','#888888'),
+    R: mkSide('#e8e8e8','Solid','#888888') }
+};
+var activeSide = 'both'; // 'both' | 'L' | 'R'
+var curZone = null;
+
+// Returns the active side's data object for a zone
+function getSide(zoneId) {
+  return activeSide === 'R' ? zones[zoneId].R : zones[zoneId].L;
+}
+
+// Switch top-level L/R/BOTH selector
+function switchSide(side) {
+  activeSide = side;
+  ['both','L','R'].forEach(function(s) {
+    var t = document.getElementById('stab-' + s);
+    if (t) t.classList.toggle('on', s === side);
+  });
+  // Refresh all tile bars and mode labels
+  Object.keys(zones).forEach(function(id) {
+    updateTileBar(id);
+    var el = document.getElementById('tile-mode-' + id);
+    if (el) el.innerText = getSide(id).mode;
+  });
+  // If a sheet is open, re-open with updated side
+  if (curZone && document.getElementById('sheet').classList.contains('open')) {
+    openSheet(curZone);
+  }
+}
+
+// Sync tile mode labels with zone defaults on load
+document.addEventListener('DOMContentLoaded', function() {
+  Object.keys(zones).forEach(function(id) {
+    var el = document.getElementById('tile-mode-' + id);
+    if (el) el.innerText = getSide(id).mode;
+    updateTileBar(id);
+  });
+});
+
+function showPage(id) {
+  document.querySelectorAll('.page').forEach(function(p){ p.classList.remove('active'); });
+  document.querySelectorAll('.nav-btn').forEach(function(b){ b.classList.remove('on'); });
+  document.getElementById('pg-'+id).classList.add('active');
+  document.getElementById('nav-'+id).classList.add('on');
+  updateSpecialBanner();
+}
+
+function openSheet(zoneId) {
+  curZone = zoneId;
+  var z   = zones[zoneId];
+  var sd  = getSide(zoneId);
+
+  document.getElementById('sheet-title').innerText = z.title;
+
+  // Side badge
+  var badge = document.getElementById('sheet-side-badge');
+  if (badge) {
+    badge.className = 'sheet-side-badge' +
+      (activeSide === 'L' ? ' badge-l' : activeSide === 'R' ? ' badge-r' : '');
+    badge.innerText = activeSide === 'L' ? 'LEFT' : activeSide === 'R' ? 'RIGHT' : 'BOTH';
+  }
+
+  // Build mode pills
+  var pills = document.getElementById('sheet-pills');
+  pills.innerHTML = '';
+  z.modes.forEach(function(m) {
+    var el = document.createElement('button');
+    el.className = 'pill' + (m === sd.mode ? ' on' : '');
+    el.innerText = m;
+    el.onclick = function() {
+      sd.mode = m;
+      if (activeSide === 'both') zones[zoneId].R.mode = m;
+      pills.querySelectorAll('.pill').forEach(function(p){ p.classList.remove('on'); });
+      el.classList.add('on');
+      document.getElementById('tile-mode-'+zoneId).innerText = m;
+      updateColorSection(zoneId);
+      updateTileBar(zoneId);
+    };
+    pills.appendChild(el);
+  });
+
+  // Populate color inputs
+  if (!z.noColor) {
+    document.getElementById('sheet-color').value  = sd.color;
+    document.getElementById('grad-color-a').value = sd.gradA;
+    document.getElementById('grad-color-b').value = sd.gradB;
+  }
+
+  updateColorSection(zoneId);
+  document.getElementById('backdrop').classList.add('open');
+  document.getElementById('sheet').classList.add('open');
+}
+
+function updateColorSection(zoneId) {
+  var z   = zones[zoneId];
+  var sd  = getSide(zoneId);
+  var section = document.getElementById('clr-section');
+  if (z.noColor) { section.style.display = 'none'; return; }
+  section.style.display = 'block';
+
+  var mode       = sd.mode;
+  var isRainbow  = (mode === 'Rainbow');
+  var isGradient = (mode === 'Gradient');
+  var animCls    = modeAnim[mode]; // undefined for Solid/Rainbow/Gradient
+
+  // Show/hide subsections
+  document.getElementById('clr-rainbow').style.display  = isRainbow  ? 'block' : 'none';
+  document.getElementById('clr-gradient').style.display = isGradient ? 'block' : 'none';
+  document.getElementById('clr-sync').style.display     = (!isRainbow && !isGradient) ? 'block' : 'none';
+
+  // Preview bar
+  var animWrap = document.getElementById('mode-anim-wrap');
+  var bar      = document.getElementById('mode-anim-bar');
+
+  if (isGradient) {
+    // Show gradient preview (no CSS animation, just the gradient fill)
+    animWrap.style.display = 'block';
+    bar.className = 'mode-anim-bar';
+    bar.style.background = 'linear-gradient(90deg,' + sd.gradA + ',' + sd.gradB + ')';
+  } else if (animCls) {
+    // Animated mode preview — restart on every open/mode-change
+    animWrap.style.display = 'block';
+    bar.style.background = sd.color;
+    bar.className = 'mode-anim-bar';
+    void bar.getBoundingClientRect();  // synchronous reflow → restart animation
+    bar.className = 'mode-anim-bar ' + animCls;
+  } else {
+    animWrap.style.display = 'none';
+  }
+}
+
+function updateTileBar(zoneId) {
+  var z   = zones[zoneId];
+  var bar = document.getElementById('tile-bar-'+zoneId);
+  if (!bar) return;
+
+  // In BOTH view, show a hard split if L and R have diverged
+  if (activeSide === 'both' && (z.L.color !== z.R.color || z.L.mode !== z.R.mode)) {
+    bar.className = 'tile-bar';
+    var lc = z.L.mode === 'Rainbow' ? '#ff4400' : (z.L.mode === 'Gradient' ? z.L.gradA : z.L.color);
+    var rc = z.R.mode === 'Rainbow' ? '#0044ff' : (z.R.mode === 'Gradient' ? z.R.gradA : z.R.color);
+    bar.style.background = 'linear-gradient(90deg,' + lc + ' 50%,' + rc + ' 50%)';
+    bar.style.boxShadow  = '0 0 12px ' + lc + '66';
+    bar.style.opacity    = '1';
+    return;
+  }
+
+  var sd = getSide(zoneId);
+  if (sd.mode === 'Rainbow') {
+    bar.className = 'tile-bar rainbow';
+    bar.removeAttribute('style');
+  } else if (sd.mode === 'Gradient') {
+    bar.className = 'tile-bar';
+    bar.style.background = 'linear-gradient(90deg,' + sd.gradA + ',' + sd.gradB + ')';
+    bar.style.boxShadow  = '0 0 12px ' + sd.gradA + '88';
+    bar.style.opacity    = '0.85';
+  } else {
+    bar.className = 'tile-bar';
+    bar.style.background = sd.color;
+    bar.style.boxShadow  = '0 0 12px ' + sd.color + '88';
+    bar.style.opacity    = '0.85';
+  }
+}
+
+// Single-color picker (Solid / animated modes)
+document.getElementById('sheet-color').addEventListener('input', function() {
+  if (!curZone) return;
+  var sd = getSide(curZone);
+  sd.color = this.value;
+  if (activeSide === 'both') zones[curZone].R.color = this.value;
+  updateTileBar(curZone);
+  // keep animated preview bar color in sync
+  var bar  = document.getElementById('mode-anim-bar');
+  var wrap = document.getElementById('mode-anim-wrap');
+  if (bar && wrap && wrap.style.display !== 'none') bar.style.background = this.value;
+});
+
+// Gradient color pickers
+function onGradColorChange() {
+  if (!curZone) return;
+  var a  = document.getElementById('grad-color-a').value;
+  var b  = document.getElementById('grad-color-b').value;
+  var sd = getSide(curZone);
+  sd.gradA = a; sd.gradB = b;
+  if (activeSide === 'both') { zones[curZone].R.gradA = a; zones[curZone].R.gradB = b; }
+  // Live-update gradient preview bar
+  var bar = document.getElementById('mode-anim-bar');
+  if (bar) bar.style.background = 'linear-gradient(90deg,' + a + ',' + b + ')';
+  updateTileBar(curZone);
+}
+document.getElementById('grad-color-a').addEventListener('input', onGradColorChange);
+document.getElementById('grad-color-b').addEventListener('input', onGradColorChange);
+
+function setRainbowSpeed(v) {
+  // Exponential: v=1→20s (very slow), v=5→4s, v=10→0.6s
+  var secs = (20 * Math.pow(0.68, v - 1)).toFixed(2);
+  document.querySelector('.rainbow-display').style.animationDuration = secs + 's';
+  // sync tile bar speed if DRL is in rainbow mode
+  if (curZone) {
+    var bar = document.getElementById('tile-bar-' + curZone);
+    if (bar) bar.style.animationDuration = secs + 's';
+  }
+}
+
+function onBackdropTap() {
+  var ids = ['disc-sheet','settings-sheet','about-sheet','fw-sheet','reset-sheet','sheet'];
+  for (var i = 0; i < ids.length; i++) {
+    var el = document.getElementById(ids[i]);
+    if (el && el.classList.contains('open')) {
+      el.classList.remove('open');
+      document.getElementById('backdrop').classList.remove('open');
+      if (ids[i] === 'sheet') curZone = null;
+      if (ids[i] === 'disc-sheet') { /* leave selectedSpecial intact */ }
+      break;
+    }
+  }
+}
+
+function closeSheet() {
+  document.getElementById('backdrop').classList.remove('open');
+  document.getElementById('sheet').classList.remove('open');
+  curZone = null;
+}
+
+/* ── SPECIAL MODES ── */
+var specialModes = [
+  {
+    id: 'police',
+    name: 'POLICE',
+    desc: 'Left side red, right side blue — rapid alternating flash.',
+    tag: 'ILLEGAL ON PUBLIC ROADS',
+    preview: 'split',
+    clsL: 'sp-police-l',
+    clsR: 'sp-police-r'
+  },
+  {
+    id: 'strobe',
+    name: 'STROBELIGHT',
+    desc: 'High-frequency white strobe. The wheel-freeze effect seen at car shows.',
+    tag: 'PHOTOSENSITIVITY RISK',
+    preview: 'full',
+    cls: 'sp-strobe'
+  },
+  {
+    id: 'rave',
+    name: 'RAVE',
+    desc: 'All zones cycle through the full color spectrum at high speed.',
+    tag: 'SHOW USE ONLY',
+    preview: 'full',
+    cls: 'sp-rave'
+  },
+  {
+    id: 'drift',
+    name: 'NEON DRIFT',
+    desc: 'Cyan left, magenta right — rapid alternating split. JDM underground aesthetic.',
+    tag: 'SHOW USE ONLY',
+    preview: 'split',
+    clsL: 'sp-drift-l',
+    clsR: 'sp-drift-r'
+  },
+  {
+    id: 'fire',
+    name: 'FIRE',
+    desc: 'Red-orange heat wave pulse across all zones. Synchronized breathing.',
+    tag: 'SHOW USE ONLY',
+    preview: 'full',
+    cls: 'sp-fire'
+  }
+];
+
+var selectedSpecial = null;
+var runningSpecial  = null;
+
+function buildSpecialCards() {
+  var list = document.getElementById('spcl-list');
+  list.innerHTML = '';
+  specialModes.forEach(function(m) {
+    var card = document.createElement('div');
+    card.className = 'spcl-card';
+    card.id = 'scard-' + m.id;
+
+    var previewHTML;
+    if (m.preview === 'split') {
+      previewHTML = '<div class="spcl-bar-wrap">' +
+        '<div class="sp-half ' + m.clsL + '"></div>' +
+        '<div class="sp-half ' + m.clsR + '"></div>' +
+        '</div>';
+    } else {
+      previewHTML = '<div class="spcl-bar-wrap">' +
+        '<div class="sp-full ' + m.cls + '"></div>' +
+        '</div>';
+    }
+
+    card.innerHTML =
+      '<div class="spcl-card-body">' +
+        '<div class="spcl-name">' + m.name + '</div>' +
+        '<div class="spcl-desc">' + m.desc + '</div>' +
+        '<div class="spcl-tag">' + m.tag + '</div>' +
+      '</div>' +
+      previewHTML;
+
+    card.addEventListener('click', function() { selectSpecial(m.id); });
+    list.appendChild(card);
+  });
+}
+
+function selectSpecial(id) {
+  if (runningSpecial) return; // locked while running
+  selectedSpecial = id;
+  document.querySelectorAll('.spcl-card').forEach(function(c) {
+    c.classList.remove('selected');
+  });
+  var el = document.getElementById('scard-' + id);
+  if (el) el.classList.add('selected');
+  var btn = document.getElementById('spclBtn');
+  var m = specialModes.find(function(x){ return x.id === id; });
+  btn.className = 'spcl-activate ready';
+  btn.innerText = 'ACTIVATE  ' + m.name;
+}
+
+function activateSpecial() {
+  if (runningSpecial) {
+    // deactivate
+    runningSpecial = null;
+    selectedSpecial = null;
+    document.querySelectorAll('.spcl-card').forEach(function(c) {
+      c.classList.remove('selected','running');
+      var badge = c.querySelector('.spcl-active-badge');
+      if (badge) badge.remove();
+    });
+    var btn = document.getElementById('spclBtn');
+    btn.className = 'spcl-activate';
+    btn.innerText = 'ACTIVATE';
+    updateSpecialBanner();
+    return;
+  }
+  if (!selectedSpecial) return;
+  // show disclaimer sheet
+  document.getElementById('backdrop').classList.add('open');
+  document.getElementById('disc-sheet').classList.add('open');
+}
+
+function updateSpecialBanner() {
+  var ap = document.querySelector('.page.active');
+  var pageId = ap ? ap.id.replace('pg-', '') : 'home';
+
+  // Big DEACTIVATE button: showroom always, home only when running
+  var sb = document.getElementById('spclBtn');
+  if (sb) sb.style.display = (pageId === 'show' || (runningSpecial && pageId === 'home')) ? 'block' : 'none';
+
+  // Slim banner: tuner page only, when running
+  var tb  = document.getElementById('tuner-banner');
+  var tbt = document.getElementById('tuner-banner-text');
+  if (tb) {
+    if (runningSpecial && pageId === 'tuner') {
+      var m = specialModes.find(function(x){ return x.id === runningSpecial; });
+      if (tbt && m) tbt.innerText = m.name + ' ACTIVE';
+      tb.classList.add('active');
+    } else {
+      tb.classList.remove('active');
+    }
+  }
+}
+
+function confirmSpecial() {
+  closeDisclaimer();
+  runningSpecial = selectedSpecial;
+  document.querySelectorAll('.spcl-card').forEach(function(c) {
+    c.classList.remove('selected');
+    // remove any previous active badge
+    var old = c.querySelector('.spcl-active-badge');
+    if (old) old.remove();
+  });
+  var el = document.getElementById('scard-' + runningSpecial);
+  if (el) {
+    el.classList.add('running');
+    // inject badge next to the tag
+    var tag = el.querySelector('.spcl-tag');
+    if (tag) {
+      var badge = document.createElement('span');
+      badge.className = 'spcl-active-badge';
+      badge.innerText = 'NOW ACTIVE';
+      tag.parentNode.insertBefore(badge, tag.nextSibling);
+    }
+  }
+  var m = specialModes.find(function(x){ return x.id === runningSpecial; });
+  var btn = document.getElementById('spclBtn');
+  btn.className = 'spcl-activate running';
+  btn.innerText = 'DEACTIVATE — ' + m.name;
+  updateSpecialBanner();
+}
+
+function closeDisclaimer() {
+  document.getElementById('backdrop').classList.remove('open');
+  document.getElementById('disc-sheet').classList.remove('open');
+}
+
+// Build cards on load
+document.addEventListener('DOMContentLoaded', buildSpecialCards);
+
+/* ── TUNER SETTINGS ── */
+
+var tunerSettings = {
+  ledCount:     20,
+  swapLR:       'Normal',
+  ledType:      'WS2812B',
+  autoOff:      '5 min',
+  startupMode:  'Last Used',
+  startupAnim:  'None'
+};
+
+var settingDefs = {
+  ledCount: {
+    name: 'LED Count — Per Side',
+    desc: 'Total number of LEDs on each side of the reflector. Wipe speed scales automatically.',
+    type: 'number', min: 5, max: 60, step: 1, unit: 'LEDs'
+  },
+  swapLR: {
+    name: 'Swap Left / Right',
+    desc: 'Flip if the left and right channels appear reversed after installation.',
+    type: 'pick',
+    options: ['Normal', 'Swapped']
+  },
+  ledType: {
+    name: 'LED Type',
+    desc: 'Must match the physical LED strip installed. SK6812 adds a white channel for brighter DRL.',
+    type: 'pick',
+    options: ['WS2812B', 'SK6812 RGBW', 'WS2811']
+  },
+  autoOff: {
+    name: 'Auto-Off Timer',
+    desc: 'Automatically shut off LEDs after this period with no input signal. Protects your battery.',
+    type: 'pick',
+    options: ['Off', '1 min', '2 min', '5 min', '10 min', '30 min']
+  },
+  startupMode: {
+    name: 'Startup Mode',
+    desc: 'Which configuration AuraCore loads when the car powers on.',
+    type: 'pick',
+    options: ['Last Used', 'Default', 'Off']
+  },
+  startupAnim: {
+    name: 'Startup Animation',
+    desc: 'Animation played when the car powers on before settling into the active mode. Preview updates as you select.',
+    type: 'pick',
+    options: ['None', 'Breathe', 'Wipe', 'Cascade', 'Flash', 'Knight Rider'],
+    animClass: {
+      'None':         null,
+      'Breathe':      'su-breathe',
+      'Wipe':         'su-wipe',
+      'Cascade':      'su-cascade',
+      'Flash':        'su-flash',
+      'Knight Rider': 'su-knight'
+    }
+  }
+};
+
+var currentSettingId = null;
+
+function openSetting(id) {
+  currentSettingId = id;
+  var def = settingDefs[id];
+  document.getElementById('ss-title').innerText = def.name;
+  document.getElementById('ss-desc').innerText  = def.desc;
+
+  var content = document.getElementById('ss-content');
+  content.innerHTML = '';
+
+  if (def.type === 'pick') {
+    var wrap = document.createElement('div');
+    wrap.className = 'ss-picks';
+    def.options.forEach(function(opt) {
+      var btn = document.createElement('button');
+      btn.className = 'pill' + (tunerSettings[id] === opt ? ' on' : '');
+      btn.innerText = opt;
+      btn.setAttribute('data-val', opt);
+      wrap.appendChild(btn);
+    });
+    content.appendChild(wrap);
+
+    // Animated preview bar — only for settings that declare animClass
+    if (def.animClass) {
+      var prevLabel = document.createElement('div');
+      prevLabel.className = 'sheet-lbl';
+      prevLabel.style.marginTop = '20px';
+      prevLabel.innerText = 'PREVIEW';
+      content.appendChild(prevLabel);
+
+      var bar = document.createElement('div');
+      bar.id = 'su-anim-bar';
+      bar.className = 'mode-anim-bar';
+      bar.style.background = '#e8c070';
+      content.appendChild(bar);
+
+      // Apply initial animation for current value
+      var initCls = def.animClass[tunerSettings[id]];
+      if (initCls) {
+        void bar.getBoundingClientRect();
+        bar.className = 'mode-anim-bar ' + initCls;
+      }
+    }
+
+    // Wire click handlers after bar is in DOM
+    wrap.querySelectorAll('.pill').forEach(function(btn) {
+      btn.onclick = function() {
+        var opt = btn.getAttribute('data-val');
+        tunerSettings[id] = opt;
+        wrap.querySelectorAll('.pill').forEach(function(p){ p.classList.remove('on'); });
+        btn.classList.add('on');
+        updateTunerRow(id);
+        if (def.animClass) {
+          var barEl = document.getElementById('su-anim-bar');
+          if (barEl) {
+            var animCls = def.animClass[opt];
+            barEl.className = 'mode-anim-bar';
+            void barEl.getBoundingClientRect();
+            barEl.className = 'mode-anim-bar' + (animCls ? ' ' + animCls : '');
+          }
+        }
+      };
+    });
+
+  } else if (def.type === 'number') {
+    var numRow = document.createElement('div');
+    numRow.className = 'ss-num-row';
+    var big = document.createElement('span');
+    big.className = 'ss-num-big';
+    big.id = 'ss-num-display';
+    big.innerText = tunerSettings[id];
+    var unit = document.createElement('span');
+    unit.className = 'ss-num-unit';
+    unit.innerText = def.unit;
+    numRow.appendChild(big);
+    numRow.appendChild(unit);
+    content.appendChild(numRow);
+
+    var slider = document.createElement('input');
+    slider.type = 'range';
+    slider.className = 'speed';   // reuse existing range slider CSS
+    slider.min   = def.min;
+    slider.max   = def.max;
+    slider.step  = def.step;
+    slider.value = tunerSettings[id];
+    slider.oninput = function() {
+      tunerSettings[id] = parseInt(this.value);
+      document.getElementById('ss-num-display').innerText = this.value;
+      updateTunerRow(id);
+    };
+    content.appendChild(slider);
+
+    var ends = document.createElement('div');
+    ends.className = 'speed-ends';
+    ends.innerHTML = '<span>' + def.min + '</span><span>' + def.max + '</span>';
+    content.appendChild(ends);
+  }
+
+  document.getElementById('backdrop').classList.add('open');
+  document.getElementById('settings-sheet').classList.add('open');
+}
+
+function closeSettingsSheet() {
+  document.getElementById('backdrop').classList.remove('open');
+  document.getElementById('settings-sheet').classList.remove('open');
+  currentSettingId = null;
+}
+
+function updateTunerRow(id) {
+  var el = document.getElementById('tv-' + id);
+  if (!el) return;
+  el.innerHTML = tunerSettings[id] + ' <span style="color:var(--muted)">›</span>';
+}
+
+/* About */
+function openAbout() {
+  // Populate live IP if on device
+  var ip = window.location.hostname || '—';
+  var ipEl = document.getElementById('about-ip');
+  if (ipEl) ipEl.innerText = /^\d+\.\d+/.test(ip) ? ip : '—';
+  document.getElementById('backdrop').classList.add('open');
+  document.getElementById('about-sheet').classList.add('open');
+}
+function closeAbout() {
+  document.getElementById('backdrop').classList.remove('open');
+  document.getElementById('about-sheet').classList.remove('open');
+}
+
+/* Firmware Update */
+function openFirmwareUpdate() {
+  document.getElementById('backdrop').classList.add('open');
+  document.getElementById('fw-sheet').classList.add('open');
+}
+function closeFwSheet() {
+  document.getElementById('backdrop').classList.remove('open');
+  document.getElementById('fw-sheet').classList.remove('open');
+}
+function handleFwFile(input) {
+  if (input.files && input.files[0]) {
+    var name = input.files[0].name;
+    closeFwSheet();
+    // TODO: POST to /update when on-device
+    alert('Selected: ' + name + '\n(OTA upload will be wired to /update endpoint)');
+  }
+}
+
+/* Factory Reset */
+function openFactoryReset() {
+  document.getElementById('backdrop').classList.add('open');
+  document.getElementById('reset-sheet').classList.add('open');
+}
+function closeResetSheet() {
+  document.getElementById('backdrop').classList.remove('open');
+  document.getElementById('reset-sheet').classList.remove('open');
+}
+function confirmFactoryReset() {
+  closeResetSheet();
+  // TODO: POST to /reset when on-device
+  alert('Factory reset triggered.\n(Will POST to /reset endpoint on device)');
+}
+</script>
+</body>
+</html>
